@@ -39,10 +39,21 @@ func CheckMultiPoc(req *http.Request, pocs []*Poc, workers int) {
 			for task := range tasks {
 				isVul, _, name := executePoc(task.Req, task.Poc)
 				if isVul {
-					printStr := fmt.Sprintf("%-30v %-35v %s", task.Req.URL, colorR.BgRed.Render("PocSuccess"), color.StrRandomColor(task.Poc.Name+","+name))
+					var printStr string
+					if app.Args.CloseColor == true {
+						printStr = fmt.Sprintf("%-30v %-35v %s", task.Req.URL, "PocSuccess", task.Poc.Name+","+name)
+					} else {
+						printStr = fmt.Sprintf("%-30v %-35v %s", task.Req.URL, colorR.BgRed.Render("PocSuccess"), color.StrRandomColor(task.Poc.Name+","+name))
+					}
 					slog.Println(slog.DATA, printStr)
 					m := make(map[string]string)
 					sourceMap := misc.CloneMap(m)
+					if jw := app.Setting.OutputJson; jw != nil {
+						sourceMap["URL"] = task.Req.URL.String()
+						sourceMap["Keyword"] = "PocSuccess"
+						sourceMap["POC"] = task.Poc.Name + "," + name
+						jw.Push(sourceMap)
+					}
 					if cw := app.Setting.OutputCSV; cw != nil {
 						sourceMap["URL"] = task.Req.URL.String()
 						sourceMap["Keyword"] = "PocSuccess"
@@ -378,12 +389,22 @@ func clusterpoc(oReq *http.Request, p *Poc, variableMap map[string]interface{}, 
 			if success {
 				if rule.Continue {
 					if p.Name == "poc-yaml-backup-file" || p.Name == "poc-yaml-sql-file" {
-						red := colorR.BgRed.Render
-						format := "%-30v %-35v %s"
-						printStr := fmt.Sprintf(format, req.Url.Scheme, red("PocSuccess"), color.StrRandomColor(req.Url.Host+","+req.Url.Path+","+p.Name))
+						var printStr string
+						if app.Args.CloseColor == true {
+							printStr = fmt.Sprintf("%-30v %-35v %s", req.Url.Scheme, "PocSuccess", req.Url.Host+","+req.Url.Path+","+p.Name)
+						} else {
+							printStr = fmt.Sprintf("%-30v %-35v %s", req.Url.Scheme, colorR.BgRed.Render("PocSuccess"), color.StrRandomColor(req.Url.Host+","+req.Url.Path+","+p.Name))
+						}
+
 						slog.Println(slog.DATA, printStr)
 						m := make(map[string]string)
 						sourceMap := misc.CloneMap(m)
+						if jw := app.Setting.OutputJson; jw != nil {
+							sourceMap["URL"] = req.Url.Scheme
+							sourceMap["Keyword"] = "PocSuccess"
+							sourceMap["POC"] = req.Url.Host + "," + req.Url.Path + "," + p.Name
+							jw.Push(sourceMap)
+						}
 						if cw := app.Setting.OutputCSV; cw != nil {
 							sourceMap["URL"] = req.Url.Scheme
 							sourceMap["Keyword"] = "PocSuccess"
@@ -399,12 +420,21 @@ func clusterpoc(oReq *http.Request, p *Poc, variableMap map[string]interface{}, 
 							cw.Push(sourceMap)
 						}
 					} else {
-						red := colorR.BgRed.Render
-						format := "%-30v %-35v %s %v"
-						printStr := fmt.Sprintf(format, req.Url.Scheme, red("PocSuccess"), color.StrRandomColor(req.Url.Host+","+req.Url.Path+","+p.Name+","), tmpMap)
+						var printStr string
+						if app.Args.CloseColor == true {
+							printStr = fmt.Sprintf("%-30v %-35v %s %v", req.Url.Scheme, "PocSuccess", req.Url.Host+","+req.Url.Path+","+p.Name+",", tmpMap)
+						} else {
+							printStr = fmt.Sprintf("%-30v %-35v %s %v", req.Url.Scheme, colorR.BgRed.Render("PocSuccess"), color.StrRandomColor(req.Url.Host+","+req.Url.Path+","+p.Name+","), tmpMap)
+						}
 						slog.Println(slog.DATA, printStr)
 						m := make(map[string]string)
 						sourceMap := misc.CloneMap(m)
+						if jw := app.Setting.OutputJson; jw != nil {
+							sourceMap["URL"] = req.Url.Scheme
+							sourceMap["Keyword"] = "PocSuccess"
+							sourceMap["POC"] = req.Url.Host + "," + req.Url.Path + "," + p.Name
+							jw.Push(sourceMap)
+						}
 						if cw := app.Setting.OutputCSV; cw != nil {
 							sourceMap["URL"] = req.Url.Scheme
 							sourceMap["Keyword"] = "PocSuccess"
@@ -424,12 +454,22 @@ func clusterpoc(oReq *http.Request, p *Poc, variableMap map[string]interface{}, 
 				}
 				strMap = append(strMap, tmpMap...)
 				if i == len(p.Rules)-1 {
-					red := colorR.BgRed.Render
-					format := "%-30v %-35v %s %v"
-					printStr := fmt.Sprintf(format, req.Url.Scheme, red("PocSuccess"), color.StrRandomColor(req.Url.Host+","+req.Url.Path+","+p.Name+","), tmpMap)
+					var printStr string
+					if app.Args.CloseColor == true {
+						printStr = fmt.Sprintf("%-30v %-35v %s %v", req.Url.Scheme, "PocSuccess", req.Url.Host+","+req.Url.Path+","+p.Name+",", tmpMap)
+					} else {
+						printStr = fmt.Sprintf("%-30v %-35v %s %v", req.Url.Scheme, colorR.BgRed.Render("PocSuccess"), color.StrRandomColor(req.Url.Host+","+req.Url.Path+","+p.Name+","), tmpMap)
+					}
+
 					slog.Println(slog.DATA, printStr)
 					m := make(map[string]string)
 					sourceMap := misc.CloneMap(m)
+					if jw := app.Setting.OutputJson; jw != nil {
+						sourceMap["URL"] = req.Url.Scheme
+						sourceMap["Keyword"] = "PocSuccess"
+						sourceMap["POC"] = req.Url.Host + "," + req.Url.Path + "," + p.Name
+						jw.Push(sourceMap)
+					}
 					if cw := app.Setting.OutputCSV; cw != nil {
 						sourceMap["URL"] = req.Url.Scheme
 						sourceMap["Keyword"] = "PocSuccess"
@@ -558,7 +598,7 @@ func clustersend(oReq *http.Request, variableMap map[string]interface{}, req *Re
 		}
 		return false, err
 	}
-	//fmt.Println(fmt.Sprintf("%v, %s", out, out.Type().TypeName()))
+	//fmt.Printf("%v, %s", out, out.Type().TypeName()))
 	if fmt.Sprintf("%v", out) == "false" { //如果false不继续执行后续rule
 		return false, err // 如果最后一步执行失败，就算前面成功了最终依旧是失败
 	}

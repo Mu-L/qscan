@@ -1,14 +1,14 @@
-package pocScan
+package Plugins
 
 import (
 	"Qscan/app"
 	"Qscan/core/pocScan/lib"
 	"Qscan/core/slog"
-	"Qscan/lib/color"
+	"Qscan/lib/misc"
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	colorR "github.com/gookit/color"
+	"github.com/lcvvvv/stdio/chinese"
 	"strconv"
 	"strings"
 	"time"
@@ -94,6 +94,8 @@ func HexUnicodeStringToString(src string) string {
 }
 
 func read(text []byte, host string) error {
+	var printStr string
+
 	encodedStr := hex.EncodeToString(text)
 
 	hn := ""
@@ -111,9 +113,9 @@ func read(text []byte, host string) error {
 
 	hostnames := strings.Replace(encodedStr, "0700", "", -1)
 	hostname := strings.Split(hostnames, "000000")
-	result := "NetInfo://" + host
+	result := "NetInfo://" + host + ":135"
 	if name != "" {
-		userName += name + ","
+		userName += "," + name
 	}
 	hostname = hostname[1:]
 	for i := 0; i < len(hostname); i++ {
@@ -122,9 +124,38 @@ func read(text []byte, host string) error {
 		if err != nil {
 			return err
 		}
-		IPP += string(host) + ","
+		hostQ := strings.TrimLeft(string(host), " ")
+		hostQ = strings.TrimRight(hostQ, " ")
+		IPP += "," + hostQ
 	}
-	printStr := fmt.Sprintf("%-30v %-35v %s", result, colorR.BgRed.Render(strings.TrimSuffix(userName, ",")), color.StrRandomColor(strings.TrimSuffix(IPP, ",")))
+	printStr = fmt.Sprintf("%-30v \n    %v \n    %s", result, "主机名："+strings.ReplaceAll(userName, ",", "\n       └─ "), "发现的网络接口："+strings.ReplaceAll(IPP, ",", "\n       └─ "))
+
+	// 保存
+	m := make(map[string]string)
+	sourceMap := misc.CloneMap(m)
+	if jw := app.Setting.OutputJson; jw != nil {
+		sourceMap["URL"] = result
+		sourceMap["Keyword"] = "NetInfo"
+		sourceMap["主机名"] = userName
+		sourceMap["网络接口"] = IPP
+		jw.Push(sourceMap)
+	}
+	if cw := app.Setting.OutputCSV; cw != nil {
+		sourceMap["URL"] = result
+		sourceMap["Keyword"] = "NetInfo"
+		sourceMap["主机名"] = userName
+		sourceMap["网络接口"] = IPP
+		delete(sourceMap, "Header")
+		delete(sourceMap, "Cert")
+		delete(sourceMap, "Response")
+		delete(sourceMap, "Body")
+		sourceMap["Digest"] = strconv.Quote(sourceMap["Digest"])
+		for key, value := range sourceMap {
+			sourceMap[key] = chinese.ToUTF8(value)
+		}
+		cw.Push(sourceMap)
+	}
+
 	slog.Println(slog.DATA, printStr)
 	return nil
 }

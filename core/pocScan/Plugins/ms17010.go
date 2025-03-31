@@ -1,4 +1,4 @@
-package pocScan
+package Plugins
 
 import (
 	"Qscan/app"

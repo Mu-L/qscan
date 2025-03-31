@@ -1,9 +1,7 @@
-package pocScan
+package Plugins
 
 import (
 	"Qscan/core/pocScan/info"
-	"crypto/md5"
-	"fmt"
 	"regexp"
 )
 
@@ -41,17 +39,6 @@ func InfoCheck(Url string, CheckData *[]CheckDatas) []string {
 		return infoname
 	}
 	return []string{""}
-}
-
-func CalcMd5(Body []byte) (bool, string) {
-	has := md5.Sum(Body)
-	md5str := fmt.Sprintf("%x", has)
-	for _, md5data := range info.Md5Datas {
-		if md5str == md5data.Md5Str {
-			return true, md5data.Name
-		}
-	}
-	return false, ""
 }
 
 func removeDuplicateElement(languages []string) []string {

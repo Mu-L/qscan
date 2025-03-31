@@ -2,6 +2,7 @@ package pocScan
 
 import (
 	"Qscan/app"
+	"Qscan/core/pocScan/Plugins"
 	"Qscan/core/pocScan/lib"
 	"compress/gzip"
 	"crypto/tls"
@@ -22,12 +23,12 @@ import (
 
 func WebTitle(info *app.HostInfo) error {
 	err, CheckData := GOWebTitle(info)
-	info.Infostr = InfoCheck(info.Url, &CheckData)
+	info.Infostr = Plugins.InfoCheck(info.Url, &CheckData)
 	WebScan(info)
 	return err
 }
 
-func GOWebTitle(info *app.HostInfo) (err error, CheckData []CheckDatas) {
+func GOWebTitle(info *app.HostInfo) (err error, CheckData []Plugins.CheckDatas) {
 	if ip := net.ParseIP(info.Host); ip != nil {
 		if ip.To4() != nil {
 			if info.Url == "" {
@@ -103,7 +104,7 @@ func GOWebTitle(info *app.HostInfo) (err error, CheckData []CheckDatas) {
 	return
 }
 
-func geturl(info *app.HostInfo, flag int, CheckData []CheckDatas) (error, string, []CheckDatas) {
+func geturl(info *app.HostInfo, flag int, CheckData []Plugins.CheckDatas) (error, string, []Plugins.CheckDatas) {
 	//flag 1 first try
 	//flag 2 /favicon.ico
 	//flag 3 302
@@ -152,7 +153,7 @@ func geturl(info *app.HostInfo, flag int, CheckData []CheckDatas) (error, string
 	if err != nil {
 		return err, "https", CheckData
 	}
-	CheckData = append(CheckData, CheckDatas{body, fmt.Sprintf("%s", resp.Header)})
+	CheckData = append(CheckData, Plugins.CheckDatas{body, fmt.Sprintf("%s", resp.Header)})
 	var reurl string
 	if flag != 2 {
 		if !utf8.Valid(body) {

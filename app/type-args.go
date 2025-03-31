@@ -6,6 +6,7 @@ import (
 	"github.com/gookit/color"
 	"os"
 	"strings"
+	"time"
 )
 
 type args struct {
@@ -195,3 +196,50 @@ func gradient(text string, coloRR []*color.Style256) string {
 
 	return strings.TrimRight(output, "\n")
 }
+
+// CheckErrs 检查是否为需要重试的错误
+func CheckErrs(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// 已知需要重试的错误列表
+	errs := []string{
+		"closed by the remote host", "too many connections",
+		"EOF", "A connection attempt failed",
+		"established connection failed", "connection attempt failed",
+		"Unable to read", "is not allowed to connect to this",
+		"no pg_hba.conf entry",
+		"No connection could be made",
+		"invalid packet size",
+		"bad connection",
+	}
+
+	// 检查错误是否匹配
+	errLower := strings.ToLower(err.Error())
+	for _, key := range errs {
+		if strings.Contains(errLower, strings.ToLower(key)) {
+			time.Sleep(3 * time.Second)
+			return err
+		}
+	}
+
+	return nil
+}
+
+var Userdict = map[string][]string{
+	"elastic":   {"elastic", "admin", "kibana"},
+	"rabbitmq":  {"guest", "admin", "administrator", "rabbit", "rabbitmq", "root"},
+	"kafka":     {"admin", "kafka", "root", "test"},
+	"activemq":  {"admin", "root", "activemq", "system", "user"},
+	"ldap":      {"admin", "administrator", "root", "cn=admin", "cn=administrator", "cn=manager"},
+	"smtp":      {"admin", "root", "postmaster", "mail", "smtp", "administrator"},
+	"imap":      {"admin", "mail", "postmaster", "root", "user", "test"},
+	"pop3":      {"admin", "root", "mail", "user", "test", "postmaster"},
+	"zabbix":    {"Admin", "admin", "guest", "user"},
+	"rsync":     {"rsync", "root", "admin", "backup"},
+	"cassandra": {"cassandra", "admin", "root", "system"},
+	"neo4j":     {"neo4j", "admin", "root", "test"},
+}
+
+var Passwords = []string{"123456", "admin", "admin123", "root", "", "pass123", "pass@123", "password", "Password", "P@ssword123", "123123", "654321", "111111", "123", "1", "admin@123", "Admin@123", "admin123!@#", "{user}", "{user}1", "{user}111", "{user}123", "{user}@123", "{user}_123", "{user}#123", "{user}@111", "{user}@2019", "{user}@123#4", "P@ssw0rd!", "P@ssw0rd", "Passw0rd", "qwe123", "12345678", "test", "test123", "123qwe", "123qwe!@#", "123456789", "123321", "666666", "a123456.", "123456~a", "123456!a", "000000", "1234567890", "8888888", "!QAZ2wsx", "1qaz2wsx", "abc123", "abc123456", "1qaz@WSX", "a11111", "a12345", "Aa1234", "Aa1234.", "Aa12345", "a123456", "a123123", "Aa123123", "Aa123456", "Aa12345.", "sysadmin", "system", "1qaz!QAZ", "2wsx@WSX", "qwe123!@#", "Aa123456!", "A123456s!", "sa123456", "1q2w3e", "Charge123", "Aa123456789", "elastic123"}

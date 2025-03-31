@@ -4,7 +4,7 @@ import (
 	"Qscan/app"
 	"Qscan/core/hydra"
 	"Qscan/core/pocScan"
-	"Qscan/core/pocScan/pocGo"
+	"Qscan/core/pocScan/Plugins"
 	"Qscan/core/scanner"
 	"Qscan/core/slog"
 	"Qscan/lib/color"
@@ -174,7 +174,7 @@ func start() {
 	go URLScanner.Start()
 	go HydraScanner.Start()
 	time.Sleep(time.Second * 1)
-	slog.Println(slog.INFO, "Domain、IP、Port、URL、Hydra引擎已准备就绪")
+	//slog.Println(slog.INFO, "Domain、IP、Port、URL、Hydra引擎已准备就绪")
 }
 
 func stop() {
@@ -260,19 +260,123 @@ func generatePortScanner(wg *sync.WaitGroup) *scanner.PortClient {
 	client.HandlerMatched = func(addr net.IP, port int, response *gonmap.Response) {
 		URLRaw := fmt.Sprintf("%s://%s:%d", response.FingerPrint.Service, addr.String(), port)
 		if app.Setting.Exploit == true {
-			if port == 445 {
+			// 按端口协议跑特定扫描的洞
+			switch {
+			case port == 135:
 				info := app.HostInfo{
 					Host:  addr.String(),
 					Ports: strconv.Itoa(port),
 				}
-				pocScan.MS17010(&info)
-			}
-			if port == 135 {
+				Plugins.Findnet(&info)
+			case port == 139:
 				info := app.HostInfo{
 					Host:  addr.String(),
 					Ports: strconv.Itoa(port),
 				}
-				pocScan.Findnet(&info)
+				Plugins.NetBIOSQ(&info)
+			case port == 445:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.MS17010(&info)
+				Plugins.SmbGhost(&info)
+			case port == 9200 || port == 9300:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.ElasticScan(&info)
+			case port == 5672 || port == 5671 || port == 15672 || port == 15671:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.ElasticScan(&info)
+			case port == 9092 || port == 9093:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.KafkaScan(&info)
+			case port == 61613:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.RabbitMQScan(&info)
+			case port == 389 || port == 686:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.LDAPScan(&info)
+			case port == 25 || port == 465 || port == 587:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.SmtpScanQ(&info)
+			case port == 143 || port == 993:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.IMAPScan(&info)
+			case port == 110 || port == 995:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.POP3Scan(&info)
+			case port == 161 || port == 162:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.SNMPScan(&info)
+			case port == 502 || port == 5020:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.ModbusScan(&info)
+			case port == 873:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.RsyncScan(&info)
+			case port == 9043:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.CassandraScan(&info)
+			case port == 7687:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.Neo4jScan(&info)
+			case port == 5900 || port == 5901 || port == 5902:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.VncScan(&info)
+			case port == 9000:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.FcgiScan(&info)
+			case port == 11211:
+				info := app.HostInfo{
+					Host:  addr.String(),
+					Ports: strconv.Itoa(port),
+				}
+				Plugins.MemcachedScan(&info)
 			}
 		}
 		URL, _ := url.Parse(URLRaw)
@@ -343,35 +447,17 @@ func outputHydraSuccess(addr net.IP, port int, protocol string, auth *hydra.Auth
 	var target = fmt.Sprintf("%s://%s:%d", protocol, addr.String(), port)
 	var m = auth.Map()
 	URL, _ := url.Parse(target)
-	outputHandler(URL, color.Important("CrackSuccess"), m)
+	OutputHandler(URL, color.Important("CrackSuccess"), m)
 }
 
 func outputNmapFinger(URL *url.URL, resp *gonmap.Response) {
 	finger := resp.FingerPrint
 	m := misc.ToMap(finger)
 
-	if app.Setting.Exploit == true {
-		// GO编写的POC通过指纹来判断是否启用扫描
-		for _, value := range m {
-			// 对于iss的poc
-			if strings.Contains(value, "iss") {
-				parts := strings.Split(URL.Host, ":")
-				ip := parts[0]
-				port := parts[1]
-				port1, err := strconv.Atoi(port)
-				if err != nil {
-					fmt.Printf("Error converting string to int: %s\n", err)
-					return
-				}
-				pocGo.Cve20177269(ip, port1)
-			}
-		}
-	}
-
 	m["Response"] = resp.Raw
 	m["IP"] = URL.Hostname()
 	m["Port"] = URL.Port()
-	outputHandler(URL, finger.Service, m)
+	OutputHandler(URL, finger.Service, m)
 }
 
 func outputAppFinger(URL *url.URL, banner *appfinger.Banner, finger *appfinger.FingerPrint) {
@@ -394,14 +480,14 @@ func outputAppFinger(URL *url.URL, banner *appfinger.Banner, finger *appfinger.F
 	if hostname := URL.Hostname(); uri.IsIPv4(hostname) {
 		m["IP"] = hostname
 	}
-	outputHandler(URL, banner.Title, m)
+	OutputHandler(URL, banner.Title, m)
 }
 
 func outputUnknownResponse(addr net.IP, port int, response string) {
 	//输出结果
 	target := fmt.Sprintf("unknown://%s:%d", addr.String(), port)
 	URL, _ := url.Parse(target)
-	outputHandler(URL, "无法识别该协议", map[string]string{
+	OutputHandler(URL, "无法识别该协议", map[string]string{
 		"Response": response,
 		"IP":       URL.Hostname(),
 		"Port":     strconv.Itoa(port),
@@ -459,7 +545,7 @@ func getRawDigest(s string) string {
 	return string(digestBuf) + misc.StrRandomCut(s, length-len(digestBuf))
 }
 
-func outputHandler(URL *url.URL, keyword string, m map[string]string) {
+func OutputHandler(URL *url.URL, keyword string, m map[string]string) {
 	m = misc.FixMap(m)
 	if respRaw := m["Response"]; respRaw != "" {
 		if m["Service"] == "http" || m["Service"] == "https" {

@@ -6,12 +6,10 @@ import (
 	"Qscan/core/pocScan/lib"
 	"Qscan/core/slog"
 	"Qscan/core/spy"
-	"Qscan/core/tips"
 	"Qscan/lib/color"
 	"Qscan/lib/misc"
 	"Qscan/run"
 	"embed"
-	"fmt"
 	"runtime"
 	"time"
 
@@ -136,10 +134,10 @@ func Init() {
 	if app.Setting.Output != nil {
 		slog.SetOutput(app.Setting.Output)
 	}
-	fmt.Println("Tips:", tips.GetTips())
+	//fmt.Println("Tips:", tips.GetTips())
 	slog.Println(slog.INFO, "当前环境为：", runtime.GOOS, ", 输出编码为：", app.Setting.Encoding)
 	if runtime.GOOS == "windows" && app.Setting.CloseColor == true {
-		slog.Println(slog.INFO, "在Windows系统下，默认不会开启颜色展示，可以通过添加环境变量开启哦：KSCAN_COLOR=TRUE")
+		//slog.Println(slog.INFO, "在Windows系统下，默认不会开启颜色展示，可以通过添加环境变量开启哦：KSCAN_COLOR=TRUE")
 	}
 }
 
@@ -155,12 +153,12 @@ func InitQscan() {
 	lib.Inithttp()
 	//HTTP指纹库初始化
 	fs, _ := fingerprintEmbed.Open(fingerprintPath)
-	if n, err := appfinger.InitDatabaseFS(fs); err != nil {
+	if _, err := appfinger.InitDatabaseFS(fs); err != nil {
 		slog.Println(slog.ERROR, "指纹库加载失败，请检查【fingerprint.txt】文件", err)
 	} else {
-		slog.Printf(slog.INFO, "成功加载HTTP指纹:[%d]条", n)
+		//slog.Printf(slog.INFO, "成功加载HTTP指纹:[%d]条", n)
 	}
 	//超时及日志配置
 	gonmap.SetLogger(slog.Debug())
-	slog.Printf(slog.INFO, "成功加载NMAP探针:[%d]个,指纹[%d]条", gonmap.UsedProbesCount, gonmap.UsedMatchCount)
+	//slog.Printf(slog.INFO, "成功加载NMAP探针:[%d]个,指纹[%d]条", gonmap.UsedProbesCount, gonmap.UsedMatchCount)
 }

@@ -12,17 +12,6 @@ QScan
 FScan
 ![img.png](assets/FScan.png)
 
-+ 免杀
-
-![img.png](assets/火绒免杀.png)
-
-![img.png](assets/img360.png)
-
-![img.png](assets/img卡巴斯基.png)
-
-+ 漏洞扫描
-![img_1.png](assets/img_1.png)
-
 + MS17010检测
 
 ## 使用参数
