@@ -71,6 +71,7 @@ func ConfigInit() {
 	Setting.DnsLog = args.DnsLog
 	Setting.PocFull = args.PocFull
 	Setting.WebTimeout = args.WebTimeout
+
 }
 
 func loadOutputJSON(path string) *JSONWriter {
