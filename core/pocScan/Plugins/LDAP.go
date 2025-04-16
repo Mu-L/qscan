@@ -2,10 +2,10 @@ package Plugins
 
 import (
 	"Qscan/app"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"fmt"
 	"github.com/go-ldap/ldap/v3"
-	"github.com/lcvvvv/stdio/chinese"
 	"strconv"
 	"strings"
 	"time"

@@ -1,66 +1,40 @@
-# Qscan
+<h1 align="center"> Qscan </h1>
 
-一个比Fscan更快内网扫描器。
+<p align="center">
+<img src="https://img.shields.io/badge/go-1.23-blue" />
 
-# 特点
+<p align="center"> 一个速度极快的内网扫描器，具备端口扫描、协议检测、指纹识别，暴力破解，漏洞探测等功能。支持协议1200+，协议指纹10000+，应用指纹20000+，暴力破解协议10余种 </p>
 
-+ 更快的扫描速度，同端口数下速度对比：
+<p align="center"> 中文文档 | <a href="README.en.md">English</a> </p>
+
+# 🚀 上手指南
+
+📢 请务必花一点时间阅读此文档，有助于你快速熟悉JYso！
+
+🧐 使用文档[Wiki](https://github.com/qi4L/qscan/wiki)。
+
+✔ 下载最新版本的[Releases](https://github.com/qi4L/qscan/releases)。
+
+# 👍 特点
+
++ spy 模式极速遍历常见B段，比常见的一个一个遍历，快上很多倍；
++ 在精确识别端口的同时，又拥有极快的速度；
+  + 线程池优化：减少内存分配和 GC 开销；
+  + 模板缓存：减少重复构建；
+  + 并行发送：榨干多核 CPU；
+  + 批量处理：减少系统调用；
+  + 并行处理管道： 接收、解析、处理三阶段并行，效率最大化；
+  + 缓冲区优化: 增加 Channel 缓冲区，避免阻塞；
+
+# 和Fscan对比的优势
+
++ 同端口数，同线程数下的速度对比：
 
 QScan
 ![img.png](assets/qscan速度.png)
 
 FScan
 ![img.png](assets/FScan.png)
-
-+ MS17010检测
-
-## 使用参数
-
-```
-optional arguments:
-  -h , --help     show this help message and exit
-  -t , --target   指定探测对象：
-                  IP地址：114.114.114.114
-                  IP地址段：114.114.114.114/24,不建议子网掩码小于12
-                  IP地址段：114.114.114.114-115.115.115.115
-                  URL地址：https://www.baidu.com
-                  文件地址：file:/tmp/target.txt
-                  剪切板: paste or clipboard
-  --spy           网段探测模式，此模式下将自动探测主机可达的内网网段可接收参数为：
-                  (空)、192、10、172、all、指定IP地址(将探测该IP地址B段存活网关)
-options:
-  --check         针对目标地址做指纹识别，仅不会进行端口探测
-  -p , --port     扫描指定端口，默认会扫描TOP400，支持：80,8080,8088-8090
-  -eP, --excluded-port 跳过扫描指定的端口，支持：80,8080,8088-8090
-  -o , --output   将扫描结果保存到文件
-  -oJ             将扫描结果使用json格式保存到文件
-  -oC             将扫描结果使用csv格式保存到文件
-  -Pn          	  使用此参数后，将不会进行智能存活性探测，现在默认会开启智能存活性探测，提高效率
-  -Cn             使用此参数后，控制台输出结果将不会带颜色。
-  -Dn             使用此参数后，将关闭CDN识别功能
-  -sV             使用此参数后，将对所有端口进行全探针探测，此参数极度影响效率，慎用！
-  --top           扫描经过筛选处理的常见端口TopX，最高支持1000个，默认为TOP400
-  --proxy         设置代理(socks5|socks4|https|http)://IP:Port
-  --threads       线程参数,默认线程100,最大值为2048
-  --path          指定请求访问的目录，只支持单个目录
-  --host          指定所有请求的头部Host值
-  --timeout       设置超时时间
-  --encoding      设置终端输出编码，可指定为：gb2312、utf-8
-  -hY , --hydra         自动化爆破支持协议：ssh,rdp,ftp,smb,mysql,mssql,oracle,postgresql,mongodb,redis,默认会开启全部
-  -eX , --exploit       漏洞探测，使用xray poc
-hydra options:
-   --hydra-user   自定义hydra爆破用户名:username or user1,user2 or file:username.txt
-   --hydra-pass   自定义hydra爆破密码:password or pass1,pass2 or file:password.txt
-                  若密码中存在使用逗号的情况，则使用\,进行转义，其他符号无需转义
-   --hydra-update 自定义用户名、密码模式，若携带此参数，则为新增模式，会将用户名和密码补充在默认字典后面。否则将替换默认字典。
-   --hydra-mod    指定自动化暴力破解模块:rdp or rdp,ssh,smb
-exploit options:
-   --cookie       设置cookie
-   --num          web poc 发包速率  (default 20)
-   --dns          使用DnsLog Poc
-   --full         poc全扫描，如：shiro 100 key
-   --wt           web访问超时时间 (default 5)
-```
 
 # 参考
 

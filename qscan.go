@@ -13,10 +13,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/lcvvvv/appfinger"
-	"github.com/lcvvvv/gonmap"
-	"github.com/lcvvvv/pool"
-	"github.com/lcvvvv/stdio"
+	"Qscan/core/appfinger"
+	"Qscan/core/gonmap"
+	"Qscan/core/stdio"
+	"Qscan/lib/pool"
 )
 
 // logo信息

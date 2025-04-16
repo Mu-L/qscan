@@ -2,10 +2,10 @@ package Plugins
 
 import (
 	"Qscan/app"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"encoding/binary"
 	"fmt"
-	"github.com/lcvvvv/stdio/chinese"
 	"net"
 	"strconv"
 	"time"

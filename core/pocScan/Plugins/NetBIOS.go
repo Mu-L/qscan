@@ -3,11 +3,11 @@ package Plugins
 import (
 	"Qscan/app"
 	"Qscan/core/pocScan/lib"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/lcvvvv/stdio/chinese"
 	"gopkg.in/yaml.v3"
 	"net"
 	"strconv"

@@ -2,11 +2,11 @@ package Plugins
 
 import (
 	"Qscan/app"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/lcvvvv/stdio/chinese"
 	"net/http"
 	"strconv"
 	"strings"

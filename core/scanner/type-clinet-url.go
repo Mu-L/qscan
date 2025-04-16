@@ -1,9 +1,9 @@
 package scanner
 
 import (
+	"Qscan/core/appfinger"
+	"Qscan/core/gonmap"
 	"errors"
-	"github.com/lcvvvv/appfinger"
-	"github.com/lcvvvv/gonmap"
 	"net/http"
 	"net/url"
 )

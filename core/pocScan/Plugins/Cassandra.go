@@ -2,10 +2,10 @@ package Plugins
 
 import (
 	"Qscan/app"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"fmt"
 	"github.com/gocql/gocql"
-	"github.com/lcvvvv/stdio/chinese"
 	"strconv"
 	"strings"
 	"time"

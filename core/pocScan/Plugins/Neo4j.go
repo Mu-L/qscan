@@ -2,9 +2,9 @@ package Plugins
 
 import (
 	"Qscan/app"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"fmt"
-	"github.com/lcvvvv/stdio/chinese"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"strconv"
 	"strings"

@@ -2,9 +2,9 @@ package Plugins
 
 import (
 	"Qscan/app"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"fmt"
-	"github.com/lcvvvv/stdio/chinese"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"net"
 	"strconv"

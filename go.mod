@@ -12,13 +12,8 @@ require (
 	github.com/huin/asn1ber v0.0.0-20120622192748-af09f62e6358
 	github.com/icodeface/tls v0.0.0-20190904083142-17aec93c60e5
 	github.com/jlaffaye/ftp v0.0.0-20220630165035-11536801d1ff
-	github.com/lcvvvv/appfinger v0.1.1
 
 	//gonmap
-	github.com/lcvvvv/gonmap v1.3.4
-	github.com/lcvvvv/pool v0.0.0-00010101000000-000000000000
-	github.com/lcvvvv/simplehttp v0.1.1
-	github.com/lcvvvv/stdio v0.1.2
 	github.com/lib/pq v1.10.2
 
 	//grdp
@@ -37,15 +32,20 @@ require (
 
 require (
 	github.com/IBM/sarama v1.45.1
+	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/go-ldap/ldap/v3 v3.4.10
 	github.com/gocql/gocql v1.7.0
 	github.com/google/cel-go v0.20.1
 	github.com/gookit/color v1.5.4
 	github.com/gosnmp/gosnmp v1.39.0
+	github.com/lcvvvv/gonmap v1.3.4
+	github.com/lcvvvv/simplehttp v0.1.1
+	github.com/lcvvvv/stdio v0.1.2
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
 	github.com/neo4j/neo4j-go-driver/v4 v4.4.8
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/satori/go.uuid v1.2.0
+	github.com/twmb/murmur3 v1.1.6
 	golang.org/x/net v0.35.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237
 	google.golang.org/protobuf v1.33.0
@@ -55,7 +55,6 @@ require (
 
 require (
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
-	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -82,7 +81,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
-	github.com/twmb/murmur3 v1.1.6 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.0.2 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect

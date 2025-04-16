@@ -1,9 +1,9 @@
 package slog
 
 import (
+	"Qscan/core/stdio"
 	"Qscan/lib/color"
 	"fmt"
-	"github.com/lcvvvv/stdio"
 	"io"
 	"io/ioutil"
 	"log"

@@ -1,7 +1,7 @@
 package scanner
 
 import (
-	"github.com/lcvvvv/gonmap"
+	"Qscan/core/gonmap"
 	"net"
 )
 

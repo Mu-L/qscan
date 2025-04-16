@@ -4,9 +4,9 @@ import (
 	"Qscan/core/slog"
 	"Qscan/lib/misc"
 	"Qscan/lib/osping"
+	"Qscan/lib/pool"
 	"Qscan/lib/uri"
 	"fmt"
-	"github.com/lcvvvv/pool"
 	"net"
 	"strings"
 )

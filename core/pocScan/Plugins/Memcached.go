@@ -3,9 +3,9 @@ package Plugins
 import (
 	"Qscan/app"
 	"Qscan/core/pocScan/lib"
+	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"fmt"
-	"github.com/lcvvvv/stdio/chinese"
 	"strconv"
 	"strings"
 	"time"
