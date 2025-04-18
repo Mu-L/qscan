@@ -12,6 +12,7 @@ import (
 
 type Config struct {
 	Target                       []string
+	ExcludedIp                   []string
 	Port                         []int
 	Output                       *os.File
 	Proxy, Encoding              string
@@ -44,6 +45,7 @@ func ConfigInit() {
 	Setting.loadExcludedPort()
 	Setting.loadOutput()
 	Setting.loadScanPing()
+	Setting.ExcludedIp = args.ExcludedIp
 	Setting.Timeout = time.Duration(args.Timeout) * time.Second
 	Setting.Check = args.Check
 	if Setting.Check == true {
@@ -71,7 +73,6 @@ func ConfigInit() {
 	Setting.DnsLog = args.DnsLog
 	Setting.PocFull = args.PocFull
 	Setting.WebTimeout = args.WebTimeout
-
 }
 
 func loadOutputJSON(path string) *JSONWriter {

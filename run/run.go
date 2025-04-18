@@ -39,9 +39,18 @@ func Start() {
 	//扫描器进入监听状态
 	start()
 	//开始分发扫描任务
-	for _, expr := range app.Setting.Target {
-		pushTarget(expr)
+	if app.Setting.ExcludedIp != nil {
+		tar := removeRepeat(app.Setting.ExcludedIp, app.Setting.Target)
+		fmt.Println(tar)
+		for _, expr := range tar {
+			pushTarget(expr)
+		}
+	} else {
+		for _, expr := range app.Setting.Target {
+			pushTarget(expr)
+		}
 	}
+
 	slog.Println(slog.INFO, "所有扫描任务已下发完毕")
 	//根据扫描情况，关闭scanner
 	go stop()
@@ -77,6 +86,7 @@ func pushTarget(expr string) {
 	}
 	if uri.IsCIDR(expr) {
 		for _, ip := range uri.CIDRToIP(expr) {
+
 			pushTarget(ip.String())
 		}
 		return
@@ -605,4 +615,22 @@ func watchDog() {
 			slog.Println(slog.WARN, warn)
 		}
 	}
+}
+
+// var1 是要去除的
+// var2 是最后要保留的
+func removeRepeat(var1, var2 []string) []string {
+	set := make(map[string]bool)
+	for _, v := range var1 {
+		set[v] = true
+	}
+
+	result := []string{}
+	for _, v := range var2 {
+		if !set[v] {
+			result = append(result, v)
+		}
+	}
+
+	return result
 }

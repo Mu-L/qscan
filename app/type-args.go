@@ -11,10 +11,11 @@ import (
 
 type args struct {
 	USAGE, HELP, LOGO, SYNTAX string
-
+	//qscan模块
 	Help, Debug, ClosePing, Check, CloseColor, Scan bool
 	ScanVersion, DownloadQQwry, CloseCDN            bool
 	Output, Proxy, Encoding                         string
+	ExcludedIp                                      []string
 	Port, ExcludedPort                              []int
 	Path, Host, Target                              []string
 	OutputJson, OutputCSV                           string
@@ -89,13 +90,15 @@ func (o *args) define() {
 	sflag.IntVar(&o.WebTimeout, "wt", 5)
 	sflag.BoolVar(&o.DnsLog, "dns", false)
 	sflag.BoolVar(&o.PocFull, "full", false)
-	//kscan模块
+	//qscan模块
 	sflag.StringSpliceVar(&o.Target, "target")
 	sflag.StringSpliceVar(&o.Target, "t")
 	sflag.IntSpliceVar(&o.Port, "port")
 	sflag.IntSpliceVar(&o.Port, "p")
 	sflag.IntSpliceVar(&o.ExcludedPort, "eP")
 	sflag.IntSpliceVar(&o.ExcludedPort, "excluded-port")
+	sflag.StringSpliceVar(&o.ExcludedIp, "eI")
+	sflag.StringSpliceVar(&o.ExcludedIp, "excluded-ip")
 	sflag.StringSpliceVar(&o.Path, "path")
 	sflag.StringSpliceVar(&o.Host, "host")
 	sflag.StringVar(&o.Proxy, "proxy", "")
@@ -105,10 +108,6 @@ func (o *args) define() {
 	sflag.BoolVar(&o.ClosePing, "Pn", false)
 	sflag.BoolVar(&o.Check, "check", false)
 	sflag.BoolVar(&o.ScanVersion, "sV", false)
-	//CDN检测
-	sflag.BoolVar(&o.CloseCDN, "Dn", false)
-	sflag.BoolVar(&o.DownloadQQwry, "download-qqwry", false)
-
 	//输出模块
 	sflag.StringVar(&o.Encoding, "encoding", "utf-8")
 	sflag.StringVar(&o.Output, "o", "")
