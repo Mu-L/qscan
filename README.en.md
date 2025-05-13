@@ -27,7 +27,8 @@
     + Buffer optimization: Increased channel buffer size to prevent blocking;
 
 # ✨ 404Starlink
-<img src lazysrc="https://github.com/knownsec/404StarLink-Project/raw/master/logo.png" width="30%">
+<img src="https://raw.githubusercontent.com/knownsec/404StarLink-Project/master/logo.png" alt="404StarLink Project Logo" width="30%" loading="lazy">
+
 Qscan has joined [404Starlink](https://github.com/knownsec/404StarLink)
 
 # Advantages Over Fscan
