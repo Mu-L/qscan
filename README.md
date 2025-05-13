@@ -26,11 +26,9 @@
   + 并行处理管道： 接收、解析、处理三阶段并行，效率最大化；
   + 缓冲区优化: 增加 Channel 缓冲区，避免阻塞；
 
-# ✨ 404StarLink 2.0 - Galaxy
-
-Qscan 是 404Team [404StarLink 2.0](https://github.com/knownsec/404StarLink) 中的一环，如果您有 关于Qscan的问题或者想找伙伴交流，可以参考星链加群方式。
-
-+ https://github.com/knownsec/404StarLink2.0-Galaxy#community
+# ✨ 404星链计划
+<img src lazysrc="https://github.com/knownsec/404StarLink-Project/raw/master/logo.png" width="30%">
+Qscan 现已加入 [404星链计划](https://github.com/knownsec/404StarLink)
 
 # 和Fscan对比的优势
 

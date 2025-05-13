@@ -26,6 +26,10 @@
     + Parallel processing pipeline: Parallel receiving, parsing, and processing for maximum efficiency;
     + Buffer optimization: Increased channel buffer size to prevent blocking;
 
+# ✨ 404Starlink
+<img src lazysrc="https://github.com/knownsec/404StarLink-Project/raw/master/logo.png" width="30%">
+Qscan has joined [404Starlink](https://github.com/knownsec/404StarLink)
+
 # Advantages Over Fscan
 
 + Speed comparison with the same number of ports and threads:
