@@ -27,7 +27,8 @@
   + 缓冲区优化: 增加 Channel 缓冲区，避免阻塞；
 
 # ✨ 404星链计划
-<img src lazysrc="https://github.com/knownsec/404StarLink-Project/raw/master/logo.png" width="30%">
+<img src="https://raw.githubusercontent.com/knownsec/404StarLink-Project/master/logo.png" alt="404StarLink Project Logo" width="30%" loading="lazy">
+
 Qscan 现已加入 [404星链计划](https://github.com/knownsec/404StarLink)
 
 # 和Fscan对比的优势
