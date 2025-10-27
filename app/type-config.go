@@ -2,6 +2,7 @@ package app
 
 import (
 	"Qscan/core/hydra"
+	"Qscan/core/pocScan/Plugins"
 	"Qscan/core/slog"
 	"Qscan/lib/misc"
 	"encoding/csv"
@@ -9,6 +10,44 @@ import (
 	"sync"
 	"time"
 )
+
+type ScanFunc func(*HostInfo) error
+
+var PortScanMap = map[int][]ScanFunc{
+	135:   {Plugins.Findnet},
+	139:   {Plugins.NetBIOSQ},
+	445:   {Plugins.MS17010, Plugins.SmbGhost},
+	9200:  {Plugins.ElasticScan},
+	9300:  {Plugins.ElasticScan},
+	5672:  {Plugins.ElasticScan},
+	5671:  {Plugins.ElasticScan},
+	15672: {Plugins.ElasticScan},
+	15671: {Plugins.ElasticScan},
+	9092:  {Plugins.KafkaScan},
+	9093:  {Plugins.KafkaScan},
+	61613: {Plugins.RabbitMQScan},
+	389:   {Plugins.LDAPScan},
+	686:   {Plugins.LDAPScan},
+	25:    {Plugins.SmtpScanQ},
+	465:   {Plugins.SmtpScanQ},
+	587:   {Plugins.SmtpScanQ},
+	143:   {Plugins.IMAPScan},
+	993:   {Plugins.IMAPScan},
+	110:   {Plugins.POP3Scan},
+	995:   {Plugins.POP3Scan},
+	161:   {Plugins.SNMPScan},
+	162:   {Plugins.SNMPScan},
+	502:   {Plugins.ModbusScan},
+	5020:  {Plugins.ModbusScan},
+	873:   {Plugins.RsyncScan},
+	9043:  {Plugins.CassandraScan},
+	7687:  {Plugins.Neo4jScan},
+	5900:  {Plugins.VncScan},
+	5901:  {Plugins.VncScan},
+	5902:  {Plugins.VncScan},
+	9000:  {Plugins.FcgiScan},
+	11211: {Plugins.MemcachedScan},
+}
 
 type Config struct {
 	Target                       []string
