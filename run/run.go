@@ -270,123 +270,53 @@ func generatePortScanner(wg *sync.WaitGroup) *scanner.PortClient {
 	client.HandlerMatched = func(addr net.IP, port int, response *gonmap.Response) {
 		URLRaw := fmt.Sprintf("%s://%s:%d", response.FingerPrint.Service, addr.String(), port)
 		if app.Setting.Exploit == true {
-			// 按端口协议跑特定扫描的洞
-			switch {
-			case port == 135:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
+			type ScanFunc func(*app.HostInfo) error
+
+			portScanMap := map[int][]ScanFunc{
+				135:   {Plugins.Findnet},
+				139:   {Plugins.NetBIOSQ},
+				445:   {Plugins.MS17010, Plugins.SmbGhost},
+				9200:  {Plugins.ElasticScan},
+				9300:  {Plugins.ElasticScan},
+				5672:  {Plugins.ElasticScan},
+				5671:  {Plugins.ElasticScan},
+				15672: {Plugins.ElasticScan},
+				15671: {Plugins.ElasticScan},
+				9092:  {Plugins.KafkaScan},
+				9093:  {Plugins.KafkaScan},
+				61613: {Plugins.RabbitMQScan},
+				389:   {Plugins.LDAPScan},
+				686:   {Plugins.LDAPScan},
+				25:    {Plugins.SmtpScanQ},
+				465:   {Plugins.SmtpScanQ},
+				587:   {Plugins.SmtpScanQ},
+				143:   {Plugins.IMAPScan},
+				993:   {Plugins.IMAPScan},
+				110:   {Plugins.POP3Scan},
+				995:   {Plugins.POP3Scan},
+				161:   {Plugins.SNMPScan},
+				162:   {Plugins.SNMPScan},
+				502:   {Plugins.ModbusScan},
+				5020:  {Plugins.ModbusScan},
+				873:   {Plugins.RsyncScan},
+				9043:  {Plugins.CassandraScan},
+				7687:  {Plugins.Neo4jScan},
+				5900:  {Plugins.VncScan},
+				5901:  {Plugins.VncScan},
+				5902:  {Plugins.VncScan},
+				9000:  {Plugins.FcgiScan},
+				11211: {Plugins.MemcachedScan},
+			}
+
+			info := app.HostInfo{
+				Host:  addr.String(),
+				Ports: strconv.Itoa(port),
+			}
+
+			if scanFuncs, ok := portScanMap[port]; ok {
+				for _, scanFunc := range scanFuncs {
+					scanFunc(&info)
 				}
-				Plugins.Findnet(&info)
-			case port == 139:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.NetBIOSQ(&info)
-			case port == 445:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.MS17010(&info)
-				Plugins.SmbGhost(&info)
-			case port == 9200 || port == 9300:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.ElasticScan(&info)
-			case port == 5672 || port == 5671 || port == 15672 || port == 15671:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.ElasticScan(&info)
-			case port == 9092 || port == 9093:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.KafkaScan(&info)
-			case port == 61613:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.RabbitMQScan(&info)
-			case port == 389 || port == 686:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.LDAPScan(&info)
-			case port == 25 || port == 465 || port == 587:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.SmtpScanQ(&info)
-			case port == 143 || port == 993:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.IMAPScan(&info)
-			case port == 110 || port == 995:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.POP3Scan(&info)
-			case port == 161 || port == 162:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.SNMPScan(&info)
-			case port == 502 || port == 5020:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.ModbusScan(&info)
-			case port == 873:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.RsyncScan(&info)
-			case port == 9043:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.CassandraScan(&info)
-			case port == 7687:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.Neo4jScan(&info)
-			case port == 5900 || port == 5901 || port == 5902:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.VncScan(&info)
-			case port == 9000:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.FcgiScan(&info)
-			case port == 11211:
-				info := app.HostInfo{
-					Host:  addr.String(),
-					Ports: strconv.Itoa(port),
-				}
-				Plugins.MemcachedScan(&info)
 			}
 		}
 		URL, _ := url.Parse(URLRaw)
