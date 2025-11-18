@@ -1,6 +1,7 @@
 package gotelnet
 
 import (
+	"Qscan/core/slog"
 	"bytes"
 	"errors"
 	"fmt"
@@ -379,7 +380,7 @@ func (c *Client) MakeServerType() int {
 		return UnauthorizedAccess
 	}
 
-	//slog.Printf(slog.WARN, "%v:%v,telnet mode is : unknown ,response is :%v", c.IPAddr, c.Port, lastLine)
+	slog.Printf(slog.WARN, "%v:%v,telnet mode is : unknown ,response is :%v", c.IPAddr, c.Port, lastLine)
 	return Closed
 }
 

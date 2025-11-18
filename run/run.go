@@ -6,6 +6,7 @@ import (
 	"Qscan/core/gonmap"
 	"Qscan/core/hydra"
 	"Qscan/core/pocScan"
+	"Qscan/core/pocScan/Plugins"
 	"Qscan/core/scanner"
 	"Qscan/core/slog"
 	"Qscan/core/stdio/chinese"
@@ -270,12 +271,50 @@ func generatePortScanner(wg *sync.WaitGroup) *scanner.PortClient {
 		URLRaw := fmt.Sprintf("%s://%s:%d", response.FingerPrint.Service, addr.String(), port)
 		if app.Setting.Exploit == true {
 
+			type ScanFunc func(*app.HostInfo) error
+
 			info := app.HostInfo{
 				Host:  addr.String(),
 				Ports: strconv.Itoa(port),
 			}
 
-			if scanFuncs, ok := app.PortScanMap[port]; ok {
+			PortScanMap := map[int][]ScanFunc{
+				135:   {Plugins.Findnet},
+				139:   {Plugins.NetBIOSQ},
+				445:   {Plugins.MS17010, Plugins.SmbGhost},
+				9200:  {Plugins.ElasticScan},
+				9300:  {Plugins.ElasticScan},
+				5672:  {Plugins.ElasticScan},
+				5671:  {Plugins.ElasticScan},
+				15672: {Plugins.ElasticScan},
+				15671: {Plugins.ElasticScan},
+				9092:  {Plugins.KafkaScan},
+				9093:  {Plugins.KafkaScan},
+				61613: {Plugins.RabbitMQScan},
+				389:   {Plugins.LDAPScan},
+				686:   {Plugins.LDAPScan},
+				25:    {Plugins.SmtpScanQ},
+				465:   {Plugins.SmtpScanQ},
+				587:   {Plugins.SmtpScanQ},
+				143:   {Plugins.IMAPScan},
+				993:   {Plugins.IMAPScan},
+				110:   {Plugins.POP3Scan},
+				995:   {Plugins.POP3Scan},
+				161:   {Plugins.SNMPScan},
+				162:   {Plugins.SNMPScan},
+				502:   {Plugins.ModbusScan},
+				5020:  {Plugins.ModbusScan},
+				873:   {Plugins.RsyncScan},
+				9043:  {Plugins.CassandraScan},
+				7687:  {Plugins.Neo4jScan},
+				5900:  {Plugins.VncScan},
+				5901:  {Plugins.VncScan},
+				5902:  {Plugins.VncScan},
+				9000:  {Plugins.FcgiScan},
+				11211: {Plugins.MemcachedScan},
+			}
+
+			if scanFuncs, ok := PortScanMap[port]; ok {
 				for _, scanFunc := range scanFuncs {
 					err := scanFunc(&info)
 					if err != nil {
