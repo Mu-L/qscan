@@ -39,16 +39,8 @@ func Start() {
 	//扫描器进入监听状态
 	start()
 	//开始分发扫描任务
-	if app.Setting.ExcludedIp != nil {
-		tar := removeRepeat(app.Setting.ExcludedIp, app.Setting.Target)
-		fmt.Println(tar)
-		for _, expr := range tar {
-			pushTarget(expr)
-		}
-	} else {
-		for _, expr := range app.Setting.Target {
-			pushTarget(expr)
-		}
+	for _, expr := range app.Setting.Target {
+		pushTarget(expr)
 	}
 
 	slog.Println(slog.INFO, "所有扫描任务已下发完毕")
@@ -65,15 +57,33 @@ func pushTarget(expr string) {
 		if clipboard.Unsupported == true {
 			slog.Println(slog.ERROR, runtime.GOOS, "clipboard unsupported")
 		}
+		excludedMap := make(map[string]struct{})
+		if app.Setting.ExcludedIp != nil {
+			for _, excludedIP := range app.Setting.ExcludedIp {
+				excludedMap[excludedIP] = struct{}{}
+			}
+		}
+
 		clipboardStr, _ := clipboard.ReadAll()
 		for _, line := range strings.Split(clipboardStr, "\n") {
 			line = strings.ReplaceAll(line, "\r", "")
-			pushTarget(line)
+			if _, exists := excludedMap[line]; !exists {
+				pushTarget(line)
+			}
 		}
 		return
 	}
 	if uri.IsIPv4(expr) {
-		IPScanner.Push(net.ParseIP(expr))
+		excludedMap := make(map[string]struct{})
+		if app.Setting.ExcludedIp != nil {
+			for _, excludedIP := range app.Setting.ExcludedIp {
+				excludedMap[excludedIP] = struct{}{}
+			}
+		}
+
+		if _, exists := excludedMap[expr]; !exists {
+			IPScanner.Push(net.ParseIP(expr))
+		}
 		if app.Setting.Check == true {
 			pushURLTarget(uri.URLParse("http://"+expr), nil)
 			pushURLTarget(uri.URLParse("https://"+expr), nil)
@@ -85,15 +95,34 @@ func pushTarget(expr string) {
 		return
 	}
 	if uri.IsCIDR(expr) {
-		for _, ip := range uri.CIDRToIP(expr) {
+		excludedMap := make(map[string]struct{})
+		if app.Setting.ExcludedIp != nil {
+			for _, excludedIP := range app.Setting.ExcludedIp {
+				excludedMap[excludedIP] = struct{}{}
+			}
+		}
 
-			pushTarget(ip.String())
+		for _, ip := range uri.CIDRToIP(expr) {
+			ipStr := ip.String()
+			if _, exists := excludedMap[ipStr]; !exists {
+				pushTarget(ipStr)
+			}
 		}
 		return
 	}
 	if uri.IsIPRanger(expr) {
+		excludedMap := make(map[string]struct{})
+		if app.Setting.ExcludedIp != nil {
+			for _, excludedIP := range app.Setting.ExcludedIp {
+				excludedMap[excludedIP] = struct{}{}
+			}
+		}
+
 		for _, ip := range uri.RangerToIP(expr) {
-			pushTarget(ip.String())
+			ipStr := ip.String()
+			if _, exists := excludedMap[ipStr]; !exists {
+				pushTarget(ipStr)
+			}
 		}
 		return
 	}
@@ -549,22 +578,4 @@ func watchDog() {
 			slog.Println(slog.WARN, warn)
 		}
 	}
-}
-
-// var1 是要去除的
-// var2 是最后要保留的
-func removeRepeat(var1, var2 []string) []string {
-	set := make(map[string]bool)
-	for _, v := range var1 {
-		set[v] = true
-	}
-
-	result := []string{}
-	for _, v := range var2 {
-		if !set[v] {
-			result = append(result, v)
-		}
-	}
-
-	return result
 }
