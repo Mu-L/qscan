@@ -85,9 +85,10 @@ func loadOutputJSON(path string) *JSONWriter {
 			slog.Println(slog.ERROR, "删除文件失败，请检查：", err)
 		}
 	}
-	f, err := os.OpenFile(path, os.O_CREATE+os.O_RDWR, 0764)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0764)
 	if err != nil {
 		slog.Println(slog.ERROR, err)
+		return nil
 	}
 	jw := &JSONWriter{f, &sync.Mutex{}}
 	jw.f.Seek(0, 0)
@@ -95,7 +96,7 @@ func loadOutputJSON(path string) *JSONWriter {
 	if err != nil {
 		slog.Println(slog.ERROR, err)
 	}
-	return &JSONWriter{f, &sync.Mutex{}}
+	return jw
 }
 
 func loadOutputCSV(path string) *CSVWriter {
@@ -110,7 +111,7 @@ func loadOutputCSV(path string) *CSVWriter {
 		}
 	}
 
-	f, err := os.OpenFile(path, os.O_CREATE+os.O_RDWR, 0764)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0764)
 	if err != nil {
 		slog.Println(slog.ERROR, err)
 	}
@@ -124,7 +125,7 @@ func loadOutputCSV(path string) *CSVWriter {
 		"FoundDomain", "FoundIP", "ICP",
 		"ProbeName", "MatchRegexString",
 		//"Header", "Cert", "Response", "Body",
-	}}
+	}, &sync.Mutex{}}
 	writer.f.Write(writer.title)
 	writer.f.Flush()
 	return writer
@@ -149,17 +150,18 @@ func (c *Config) loadExcludedPort() {
 		return
 	}
 
-	var availablePort = misc.CopySlice(c.Port)
-	var ignoredPort []int
+	excludeMap := make(map[int]struct{}, len(Args.ExcludedPort))
+	for _, ep := range Args.ExcludedPort {
+		excludeMap[ep] = struct{}{}
+	}
 
-	for i, p := range c.Port {
-		for _, ep := range Args.ExcludedPort {
-			if p == ep {
-				var l = len(ignoredPort)
-				availablePort = append(availablePort[:i-l], availablePort[i-l+1:]...)
-				ignoredPort = append(ignoredPort, p)
-				break
-			}
+	availablePort := make([]int, 0, len(c.Port))
+	var ignoredPort []int
+	for _, p := range c.Port {
+		if _, excluded := excludeMap[p]; excluded {
+			ignoredPort = append(ignoredPort, p)
+		} else {
+			availablePort = append(availablePort, p)
 		}
 	}
 	c.Port = availablePort
@@ -171,7 +173,7 @@ func (c *Config) loadOutput() {
 	if expr == "" {
 		return
 	}
-	f, err := os.OpenFile(expr, os.O_CREATE+os.O_RDWR, 0764)
+	f, err := os.OpenFile(expr, os.O_CREATE|os.O_RDWR, 0764)
 	if err != nil {
 		slog.Println(slog.ERROR, err.Error())
 	} else {

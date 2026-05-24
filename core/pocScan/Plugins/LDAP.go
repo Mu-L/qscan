@@ -5,10 +5,11 @@ import (
 	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"fmt"
-	"github.com/go-ldap/ldap/v3"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-ldap/ldap/v3"
 )
 
 func LDAPScan(info *app.HostInfo) (tmperr error) {
@@ -133,8 +134,8 @@ func LDAPScan(info *app.HostInfo) (tmperr error) {
 				}
 
 				if err != nil {
-					errlog := fmt.Sprintf("LDAP服务 %s 尝试失败 用户名: %v 密码: %v 错误: %v", target, user, pass, err)
-					fmt.Println(errlog)
+					//errlog := fmt.Sprintf("LDAP服务 %s 尝试失败 用户名: %v 密码: %v 错误: %v", target, user, pass, err)
+					//fmt.Println(errlog)
 
 					if retryErr := app.CheckErrs(err); retryErr != nil {
 						if retryCount == maxRetries-1 {

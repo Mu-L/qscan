@@ -18,16 +18,31 @@ func (jw *JSONWriter) Push(m map[string]string) {
 	stat, err := jw.f.Stat()
 	if err != nil {
 		slog.Println(slog.ERROR, err)
+		return
 	}
-	jsonBuf, _ := json.MarshalIndent(m, "\t", "\t")
+	jsonBuf, err := json.MarshalIndent(m, "\t", "\t")
+	if err != nil {
+		slog.Println(slog.ERROR, err)
+		return
+	}
 	jsonBuf = append(jsonBuf, []byte("\n]\n")...)
 	if stat.Size() == 2 {
-		jw.f.Seek(stat.Size()-1, 0)
+		if _, err := jw.f.Seek(stat.Size()-1, 0); err != nil {
+			slog.Println(slog.ERROR, err)
+			return
+		}
 		jsonBuf = append([]byte("\n\t"), jsonBuf...)
-		jw.f.Write(jsonBuf)
+		if _, err := jw.f.Write(jsonBuf); err != nil {
+			slog.Println(slog.ERROR, err)
+		}
 	} else {
-		jw.f.Seek(stat.Size()-4, 0)
+		if _, err := jw.f.Seek(stat.Size()-4, 0); err != nil {
+			slog.Println(slog.ERROR, err)
+			return
+		}
 		jsonBuf = append([]byte("},\n\t"), jsonBuf...)
-		jw.f.Write(jsonBuf)
+		if _, err := jw.f.Write(jsonBuf); err != nil {
+			slog.Println(slog.ERROR, err)
+		}
 	}
 }

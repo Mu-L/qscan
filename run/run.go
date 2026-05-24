@@ -15,7 +15,6 @@ import (
 	"Qscan/lib/simplehttp"
 	"Qscan/lib/uri"
 	"fmt"
-	"github.com/atotto/clipboard"
 	"net"
 	"net/http"
 	"net/url"
@@ -24,6 +23,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/atotto/clipboard"
 )
 
 func Start() {
@@ -31,25 +32,39 @@ func Start() {
 	go watchDog()
 	//下发扫描任务
 	var wg = &sync.WaitGroup{}
-	wg.Add(4)
+	wg.Add(6)
 	IPScanner = generateIPScanner(wg)
 	PortScanner = generatePortScanner(wg)
+	EXPScanner = generateEXPScanner(wg)
 	URLScanner = generateURLScanner(wg)
+	HTTPPOCScanner = generateHTTPPOCScanner(wg)
 	HydraScanner = generateHydraScanner(wg)
 	//扫描器进入监听状态
 	start()
+	//缓存排除IP表
+	excludedMap := buildExcludedMap()
 	//开始分发扫描任务
 	for _, expr := range app.Setting.Target {
-		pushTarget(expr)
+		pushTarget(expr, excludedMap)
 	}
 
 	slog.Println(slog.INFO, "所有扫描任务已下发完毕")
 	//根据扫描情况，关闭scanner
-	go stop()
+	stop()
 	wg.Wait()
 }
 
-func pushTarget(expr string) {
+func buildExcludedMap() map[string]struct{} {
+	excludedMap := make(map[string]struct{})
+	if app.Setting.ExcludedIp != nil {
+		for _, excludedIP := range app.Setting.ExcludedIp {
+			excludedMap[excludedIP] = struct{}{}
+		}
+	}
+	return excludedMap
+}
+
+func pushTarget(expr string, excludedMap map[string]struct{}) {
 	if expr == "" {
 		return
 	}
@@ -57,29 +72,17 @@ func pushTarget(expr string) {
 		if clipboard.Unsupported == true {
 			slog.Println(slog.ERROR, runtime.GOOS, "clipboard unsupported")
 		}
-		excludedMap := make(map[string]struct{})
-		if app.Setting.ExcludedIp != nil {
-			for _, excludedIP := range app.Setting.ExcludedIp {
-				excludedMap[excludedIP] = struct{}{}
-			}
-		}
 
 		clipboardStr, _ := clipboard.ReadAll()
 		for _, line := range strings.Split(clipboardStr, "\n") {
 			line = strings.ReplaceAll(line, "\r", "")
 			if _, exists := excludedMap[line]; !exists {
-				pushTarget(line)
+				pushTarget(line, excludedMap)
 			}
 		}
 		return
 	}
 	if uri.IsIPv4(expr) {
-		excludedMap := make(map[string]struct{})
-		if app.Setting.ExcludedIp != nil {
-			for _, excludedIP := range app.Setting.ExcludedIp {
-				excludedMap[excludedIP] = struct{}{}
-			}
-		}
 
 		if _, exists := excludedMap[expr]; !exists {
 			IPScanner.Push(net.ParseIP(expr))
@@ -95,33 +98,21 @@ func pushTarget(expr string) {
 		return
 	}
 	if uri.IsCIDR(expr) {
-		excludedMap := make(map[string]struct{})
-		if app.Setting.ExcludedIp != nil {
-			for _, excludedIP := range app.Setting.ExcludedIp {
-				excludedMap[excludedIP] = struct{}{}
-			}
-		}
 
 		for _, ip := range uri.CIDRToIP(expr) {
 			ipStr := ip.String()
 			if _, exists := excludedMap[ipStr]; !exists {
-				pushTarget(ipStr)
+				pushTarget(ipStr, excludedMap)
 			}
 		}
 		return
 	}
 	if uri.IsIPRanger(expr) {
-		excludedMap := make(map[string]struct{})
-		if app.Setting.ExcludedIp != nil {
-			for _, excludedIP := range app.Setting.ExcludedIp {
-				excludedMap[excludedIP] = struct{}{}
-			}
-		}
 
 		for _, ip := range uri.RangerToIP(expr) {
 			ipStr := ip.String()
 			if _, exists := excludedMap[ipStr]; !exists {
-				pushTarget(ipStr)
+				pushTarget(ipStr, excludedMap)
 			}
 		}
 		return
@@ -135,7 +126,7 @@ func pushTarget(expr string) {
 		pushURLTarget(uri.URLParse("http://"+expr), nil)
 		pushURLTarget(uri.URLParse("https://"+expr), nil)
 		if app.Setting.Check == false {
-			pushTarget(uri.GetNetlocWithHostPath(expr))
+			pushTarget(uri.GetNetlocWithHostPath(expr), excludedMap)
 		}
 		return
 	}
@@ -149,14 +140,14 @@ func pushTarget(expr string) {
 			pushURLTarget(uri.URLParse("https://"+expr), nil)
 		}
 		if app.Setting.Check == false {
-			pushTarget(netloc)
+			pushTarget(netloc, excludedMap)
 		}
 		return
 	}
 	if uri.IsURL(expr) {
 		pushURLTarget(uri.URLParse(expr), nil)
 		if app.Setting.Check == false {
-			pushTarget(uri.GetNetlocWithURL(expr))
+			pushTarget(uri.GetNetlocWithURL(expr), excludedMap)
 		}
 		return
 	}
@@ -200,20 +191,62 @@ func pushURLTarget(URL *url.URL, response *gonmap.Response) {
 	}
 }
 
+type ScanFunc func(*app.HostInfo) error
+
+var portScanMap = map[int][]ScanFunc{
+	135:   {Plugins.Findnet},
+	139:   {Plugins.NetBIOSQ},
+	445:   {Plugins.MS17010, Plugins.SmbGhost},
+	9200:  {Plugins.ElasticScan},
+	9300:  {Plugins.ElasticScan},
+	5672:  {Plugins.ElasticScan},
+	5671:  {Plugins.ElasticScan},
+	15672: {Plugins.ElasticScan},
+	15671: {Plugins.ElasticScan},
+	9092:  {Plugins.KafkaScan},
+	9093:  {Plugins.KafkaScan},
+	61613: {Plugins.RabbitMQScan},
+	389:   {Plugins.LDAPScan},
+	686:   {Plugins.LDAPScan},
+	25:    {Plugins.SmtpScanQ},
+	465:   {Plugins.SmtpScanQ},
+	587:   {Plugins.SmtpScanQ},
+	143:   {Plugins.IMAPScan},
+	993:   {Plugins.IMAPScan},
+	110:   {Plugins.POP3Scan},
+	995:   {Plugins.POP3Scan},
+	161:   {Plugins.SNMPScan},
+	162:   {Plugins.SNMPScan},
+	502:   {Plugins.ModbusScan},
+	5020:  {Plugins.ModbusScan},
+	873:   {Plugins.RsyncScan},
+	9043:  {Plugins.CassandraScan},
+	7687:  {Plugins.Neo4jScan},
+	5900:  {Plugins.VncScan},
+	5901:  {Plugins.VncScan},
+	5902:  {Plugins.VncScan},
+	9000:  {Plugins.FcgiScan},
+	11211: {Plugins.MemcachedScan},
+}
+
 var (
-	IPScanner    *scanner.IPClient
-	PortScanner  *scanner.PortClient
-	URLScanner   *scanner.URLClient
-	HydraScanner *scanner.HydraClient
+	IPScanner      *scanner.IPClient
+	PortScanner    *scanner.PortClient
+	EXPScanner     *scanner.EXPClient
+	URLScanner     *scanner.URLClient
+	HTTPPOCScanner *scanner.HTTPPOCClient
+	HydraScanner   *scanner.HydraClient
 )
 
 func start() {
 	go IPScanner.Start()
 	go PortScanner.Start()
+	go EXPScanner.Start()
 	go URLScanner.Start()
+	go HTTPPOCScanner.Start()
 	go HydraScanner.Start()
 	time.Sleep(time.Second * 1)
-	//slog.Println(slog.INFO, "Domain、IP、Port、URL、Hydra引擎已准备就绪")
+	//slog.Println(slog.INFO, "Domain、IP、Port、EXP、URL、HTTPPOC、Hydra引擎已准备就绪")
 }
 
 func stop() {
@@ -233,14 +266,36 @@ func stop() {
 		if PortScanner.IsDone() == false {
 			continue
 		}
+		if EXPScanner.RunningThreads() == 0 && EXPScanner.IsDone() == false {
+			EXPScanner.Stop()
+			slog.Println(slog.DEBUG, "检测到所有Exploit检测任务已完成，EXP扫描引擎已停止")
+		}
+		if EXPScanner.IsDone() == false {
+			continue
+		}
 		if URLScanner.RunningThreads() == 0 && URLScanner.IsDone() == false {
 			URLScanner.Stop()
 			slog.Println(slog.DEBUG, "检测到所有URL检测任务已完成，URL扫描引擎已停止")
+		}
+		if URLScanner.IsDone() == false {
+			continue
+		}
+		if HTTPPOCScanner.RunningThreads() == 0 && HTTPPOCScanner.IsDone() == false {
+			HTTPPOCScanner.Stop()
+			slog.Println(slog.DEBUG, "检测到所有HTTPPOC检测任务已完成，HTTPPOC扫描引擎已停止")
+		}
+		if HTTPPOCScanner.IsDone() == false {
+			continue
 		}
 		if HydraScanner.RunningThreads() == 0 && HydraScanner.IsDone() == false {
 			HydraScanner.Stop()
 			slog.Println(slog.DEBUG, "检测到所有暴力破解任务已完成，暴力破解引擎已停止")
 		}
+		if HydraScanner.IsDone() == false {
+			continue
+		}
+		// 所有扫描器完成，退出循环
+		break
 	}
 }
 
@@ -299,60 +354,14 @@ func generatePortScanner(wg *sync.WaitGroup) *scanner.PortClient {
 	client.HandlerMatched = func(addr net.IP, port int, response *gonmap.Response) {
 		URLRaw := fmt.Sprintf("%s://%s:%d", response.FingerPrint.Service, addr.String(), port)
 		if app.Setting.Exploit == true {
-
-			type ScanFunc func(*app.HostInfo) error
-
-			info := app.HostInfo{
-				Host:  addr.String(),
-				Ports: strconv.Itoa(port),
-			}
-
-			PortScanMap := map[int][]ScanFunc{
-				135:   {Plugins.Findnet},
-				139:   {Plugins.NetBIOSQ},
-				445:   {Plugins.MS17010, Plugins.SmbGhost},
-				9200:  {Plugins.ElasticScan},
-				9300:  {Plugins.ElasticScan},
-				5672:  {Plugins.ElasticScan},
-				5671:  {Plugins.ElasticScan},
-				15672: {Plugins.ElasticScan},
-				15671: {Plugins.ElasticScan},
-				9092:  {Plugins.KafkaScan},
-				9093:  {Plugins.KafkaScan},
-				61613: {Plugins.RabbitMQScan},
-				389:   {Plugins.LDAPScan},
-				686:   {Plugins.LDAPScan},
-				25:    {Plugins.SmtpScanQ},
-				465:   {Plugins.SmtpScanQ},
-				587:   {Plugins.SmtpScanQ},
-				143:   {Plugins.IMAPScan},
-				993:   {Plugins.IMAPScan},
-				110:   {Plugins.POP3Scan},
-				995:   {Plugins.POP3Scan},
-				161:   {Plugins.SNMPScan},
-				162:   {Plugins.SNMPScan},
-				502:   {Plugins.ModbusScan},
-				5020:  {Plugins.ModbusScan},
-				873:   {Plugins.RsyncScan},
-				9043:  {Plugins.CassandraScan},
-				7687:  {Plugins.Neo4jScan},
-				5900:  {Plugins.VncScan},
-				5901:  {Plugins.VncScan},
-				5902:  {Plugins.VncScan},
-				9000:  {Plugins.FcgiScan},
-				11211: {Plugins.MemcachedScan},
-			}
-
-			if scanFuncs, ok := PortScanMap[port]; ok {
-				for _, scanFunc := range scanFuncs {
-					err := scanFunc(&info)
-					if err != nil {
-
-					}
-				}
+			if _, ok := portScanMap[port]; ok {
+				EXPScanner.Push(addr, port)
 			}
 		}
-		URL, _ := url.Parse(URLRaw)
+		URL, err := url.Parse(URLRaw)
+		if err != nil || URL == nil {
+			return
+		}
 		if appfinger.SupportCheck(URL.Scheme) == true {
 			pushURLTarget(URL, response)
 			return
@@ -381,17 +390,53 @@ func generateURLScanner(wg *sync.WaitGroup) *scanner.URLClient {
 	client.HandlerMatched = func(URL *url.URL, banner *appfinger.Banner, finger *appfinger.FingerPrint) {
 		outputAppFinger(URL, banner, finger)
 		if app.Setting.Exploit == true {
-			url := URL.Scheme + "://" + URL.Host
-			info := app.HostInfo{
-				Host:  URL.Scheme,
-				Ports: URL.Hostname(),
-				Url:   url,
-			}
-			pocScan.WebTitle(&info)
+			HTTPPOCScanner.Push(URL)
 		}
 	}
 	client.HandlerError = func(url *url.URL, err error) {
 		slog.Println(slog.DEBUG, "URLScanner Error: ", url.String(), err)
+	}
+	client.Defer(func() {
+		wg.Done()
+	})
+	return client
+}
+
+func generateEXPScanner(wg *sync.WaitGroup) *scanner.EXPClient {
+	EXPConfig := scanner.DefaultConfig()
+	EXPConfig.Threads = app.Setting.Threads
+
+	client := scanner.NewEXPScanner(EXPConfig)
+	client.Handler = func(addr net.IP, port int) {
+		info := app.HostInfo{
+			Host:  addr.String(),
+			Ports: strconv.Itoa(port),
+		}
+		if scanFuncs, ok := portScanMap[port]; ok {
+			for _, scanFunc := range scanFuncs {
+				_ = scanFunc(&info)
+			}
+		}
+	}
+	client.Defer(func() {
+		wg.Done()
+	})
+	return client
+}
+
+func generateHTTPPOCScanner(wg *sync.WaitGroup) *scanner.HTTPPOCClient {
+	HTTPPOCConfig := scanner.DefaultConfig()
+	HTTPPOCConfig.Threads = app.Setting.Threads/2 + 1
+
+	client := scanner.NewHTTPPOCScanner(HTTPPOCConfig)
+	client.Handler = func(URL *url.URL) {
+		url := URL.Scheme + "://" + URL.Host
+		info := app.HostInfo{
+			Host:  URL.Hostname(),
+			Ports: URL.Port(),
+			Url:   url,
+		}
+		pocScan.WebTitle(&info)
 	}
 	client.Defer(func() {
 		wg.Done()
@@ -419,7 +464,10 @@ func generateHydraScanner(wg *sync.WaitGroup) *scanner.HydraClient {
 func outputHydraSuccess(addr net.IP, port int, protocol string, auth *hydra.Auth) {
 	var target = fmt.Sprintf("%s://%s:%d", protocol, addr.String(), port)
 	var m = auth.Map()
-	URL, _ := url.Parse(target)
+	URL, err := url.Parse(target)
+	if err != nil || URL == nil {
+		return
+	}
 	OutputHandler(URL, color.Important("CrackSuccess"), m)
 }
 
@@ -459,7 +507,10 @@ func outputAppFinger(URL *url.URL, banner *appfinger.Banner, finger *appfinger.F
 func outputUnknownResponse(addr net.IP, port int, response string) {
 	//输出结果
 	target := fmt.Sprintf("unknown://%s:%d", addr.String(), port)
-	URL, _ := url.Parse(target)
+	URL, err := url.Parse(target)
+	if err != nil || URL == nil {
+		return
+	}
 	OutputHandler(URL, "无法识别该协议", map[string]string{
 		"Response": response,
 		"IP":       URL.Hostname(),
@@ -485,16 +536,15 @@ var (
 )
 
 func getHTTPDigest(s string) string {
-	var length = 24
+	const length = 24
 	var digestBuf []rune
 	_, body := simplehttp.SplitHeaderAndBody(s)
 	body = chinese.ToUTF8(body)
 	for _, r := range []rune(body) {
-		buf := []byte(string(r))
 		if len(digestBuf) == length {
 			return string(digestBuf)
 		}
-		if len(buf) > 1 {
+		if r > 127 {
 			digestBuf = append(digestBuf, r)
 		}
 	}
@@ -568,13 +618,15 @@ func watchDog() {
 	for {
 		time.Sleep(time.Second * 1)
 		var (
-			nIP    = IPScanner.RunningThreads()
-			nPort  = PortScanner.RunningThreads()
-			nURL   = URLScanner.RunningThreads()
-			nHydra = HydraScanner.RunningThreads()
+			nIP      = IPScanner.RunningThreads()
+			nPort    = PortScanner.RunningThreads()
+			nEXP     = EXPScanner.RunningThreads()
+			nURL     = URLScanner.RunningThreads()
+			nHTTPPOC = HTTPPOCScanner.RunningThreads()
+			nHydra   = HydraScanner.RunningThreads()
 		)
 		if time.Now().Unix()%180 == 0 {
-			warn := fmt.Sprintf("当前存活协程数：IP：%d 个，Port：%d 个，URL：%d 个，Hydra：%d 个", nIP, nPort, nURL, nHydra)
+			warn := fmt.Sprintf("当前存活协程数：IP：%d 个，Port：%d 个，EXP：%d 个，URL：%d 个，HTTPPOC：%d 个，Hydra：%d 个", nIP, nPort, nEXP, nURL, nHTTPPOC, nHydra)
 			slog.Println(slog.WARN, warn)
 		}
 	}

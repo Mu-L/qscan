@@ -5,10 +5,11 @@ import (
 	"Qscan/core/stdio/chinese"
 	"Qscan/lib/misc"
 	"fmt"
-	"github.com/IBM/sarama"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/IBM/sarama"
 )
 
 func KafkaScan(info *app.HostInfo) (tmperr error) {
@@ -56,7 +57,7 @@ func KafkaScan(info *app.HostInfo) (tmperr error) {
 				}
 				cw.Push(sourceMap)
 			}
-			fmt.Printf("Kafka服务 %s 无需认证即可访问", target)
+			//fmt.Printf("Kafka服务 %s 无需认证即可访问", target)
 			return nil
 		}
 		if err != nil && app.CheckErrs(err) != nil {
@@ -149,8 +150,7 @@ func KafkaScan(info *app.HostInfo) (tmperr error) {
 				}
 
 				if err != nil {
-					fmt.Printf("Kafka服务 %s 尝试失败 用户名: %s 密码: %s 错误: %v",
-						target, user, pass, err)
+					//fmt.Printf("Kafka服务 %s 尝试失败 用户名: %s 密码: %s 错误: %v", target, user, pass, err)
 					if retryErr := app.CheckErrs(err); retryErr != nil {
 						if retryCount == maxRetries-1 {
 							continue

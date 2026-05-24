@@ -19,7 +19,10 @@ var AllPocs []*lib.Poc
 func WebScan(info *app.HostInfo) {
 	once.Do(initpoc)
 	var pocinfo = app.PocInfo{}
-	URL, _ := removeStandardPorts(info.Url)
+	URL, err := removeStandardPorts(info.Url)
+	if err != nil {
+		return
+	}
 	buf := strings.Split(URL, "/")
 	pocinfo.Target = strings.Join(buf[:3], "/")
 

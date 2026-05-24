@@ -152,11 +152,14 @@ func InitQscan() {
 	//HTTP初始化
 	lib.Inithttp()
 	//HTTP指纹库初始化
-	fs, _ := fingerprintEmbed.Open(fingerprintPath)
+	fs, err := fingerprintEmbed.Open(fingerprintPath)
+	if err != nil {
+		slog.Println(slog.ERROR, "指纹库文件打开失败：", err)
+		return
+	}
+	defer fs.Close()
 	if _, err := appfinger.InitDatabaseFS(fs); err != nil {
 		slog.Println(slog.ERROR, "指纹库加载失败，请检查【fingerprint.txt】文件", err)
-	} else {
-		//slog.Printf(slog.INFO, "成功加载HTTP指纹:[%d]条", n)
 	}
 	//超时及日志配置
 	gonmap.SetLogger(slog.Debug())

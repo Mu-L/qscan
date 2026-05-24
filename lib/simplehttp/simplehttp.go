@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -59,10 +58,10 @@ var DefaultTransport http.RoundTripper = &http.Transport{
 }
 
 func NewClient() *http.Client {
-	client := http.DefaultClient
-	client.Timeout = 5 * time.Second
-	client.Transport = DefaultTransport
-	return client
+	return &http.Client{
+		Timeout:   5 * time.Second,
+		Transport: DefaultTransport,
+	}
 }
 
 func SetTimeout(c *http.Client, timeout time.Duration) {
@@ -185,7 +184,7 @@ func ReadBodyTimeout(reader io.Reader, duration time.Duration) (buf []byte, err 
 				}
 			}
 		}()
-		Buf, err = ioutil.ReadAll(reader)
+		Buf, err = io.ReadAll(reader)
 		BufChan <- Buf
 	}()
 

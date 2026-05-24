@@ -3,11 +3,35 @@ package Plugins
 import (
 	"Qscan/core/pocScan/info"
 	"regexp"
+	"sync"
 )
 
 type CheckDatas struct {
 	Body    []byte
 	Headers string
+}
+
+var (
+	infoRegexCache = make(map[string]*regexp.Regexp)
+	infoRegexMu    sync.RWMutex
+)
+
+func getInfoRegexp(pattern string) *regexp.Regexp {
+	infoRegexMu.RLock()
+	re, ok := infoRegexCache[pattern]
+	infoRegexMu.RUnlock()
+	if ok {
+		return re
+	}
+	infoRegexMu.Lock()
+	defer infoRegexMu.Unlock()
+	re, ok = infoRegexCache[pattern]
+	if ok {
+		return re
+	}
+	re = regexp.MustCompile(pattern)
+	infoRegexCache[pattern] = re
+	return re
 }
 
 func InfoCheck(Url string, CheckData *[]CheckDatas) []string {
@@ -16,26 +40,21 @@ func InfoCheck(Url string, CheckData *[]CheckDatas) []string {
 
 	for _, data := range *CheckData {
 		for _, rule := range info.RuleDatas {
+			re := getInfoRegexp(rule.Rule)
 			if rule.Type == "code" {
-				matched, _ = regexp.MatchString(rule.Rule, string(data.Body))
+				matched = re.MatchString(string(data.Body))
 			} else {
-				matched, _ = regexp.MatchString(rule.Rule, data.Headers)
+				matched = re.MatchString(data.Headers)
 			}
-			if matched == true {
+			if matched {
 				infoname = append(infoname, rule.Name)
 			}
 		}
-		//flag, name := CalcMd5(data.Body)
-
-		//if flag == true {
-		//	infoname = append(infoname, name)
-		//}
 	}
 
 	infoname = removeDuplicateElement(infoname)
 
 	if len(infoname) > 0 {
-		//fmt.Sprintf("[+] InfoScan %-25v %s ", Url, infoname)
 		return infoname
 	}
 	return []string{""}

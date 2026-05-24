@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/md5"
+	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -545,20 +547,29 @@ func (c *CustomLib) UpdateCompileOptions(args StrMap) {
 	}
 }
 
-var randSource = rand.New(rand.NewSource(time.Now().Unix()))
+var (
+	randSource = rand.New(rand.NewSource(time.Now().UnixNano()))
+	randMu     sync.Mutex
+)
 
 func randomLowercase(n int) string {
 	lowercase := "abcdefghijklmnopqrstuvwxyz"
+	randMu.Lock()
+	defer randMu.Unlock()
 	return RandomStr(randSource, lowercase, n)
 }
 
 func randomUppercase(n int) string {
 	uppercase := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	randMu.Lock()
+	defer randMu.Unlock()
 	return RandomStr(randSource, uppercase, n)
 }
 
 func randomString(n int) string {
 	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	randMu.Lock()
+	defer randMu.Unlock()
 	return RandomStr(randSource, charset, n)
 }
 
@@ -581,6 +592,25 @@ func reverseCheck(r *Reverse, timeout int64) bool {
 		return true
 	}
 	return false
+}
+
+func RandomCryptoStr(letterBytes string, n int) string {
+	randBytes := make([]byte, n)
+	for i := range randBytes {
+		b := make([]byte, 1)
+		for {
+			_, err := crand.Read(b)
+			if err != nil {
+				continue
+			}
+			idx := int(b[0])
+			if idx < len(letterBytes) {
+				randBytes[i] = letterBytes[idx]
+				break
+			}
+		}
+	}
+	return string(randBytes)
 }
 
 func RandomStr(randSource *rand.Rand, letterBytes string, n int) string {

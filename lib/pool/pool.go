@@ -2,7 +2,6 @@ package pool
 
 import (
 	"log"
-	"math/rand"
 	"os"
 	"strconv"
 	"sync"
@@ -57,7 +56,7 @@ type Pool struct {
 	//用于阻塞
 	wg *sync.WaitGroup
 	//提前结束标识符
-	Done bool
+	Done atomic.Bool
 }
 
 //实例化工作池使用
@@ -68,36 +67,41 @@ func New(threads int) *Pool {
 		wg:       &sync.WaitGroup{},
 		in:       make(chan interface{}),
 		Function: nil,
-		Done:     true,
+		Done:     atomic.Bool{},
 		Interval: time.Duration(0),
 	}
 }
 
+var tickCounter atomic.Int64
+
 //结束整个工作
 func (p *Pool) Push(i interface{}) {
-	if p.Done {
+	if p.Done.Load() {
 		return
 	}
+	defer func() {
+		recover()
+	}()
 	p.in <- i
 }
 
 //结束整个工作
 func (p *Pool) Stop() {
-	if p.Done != true {
+	if !p.Done.Load() {
 		close(p.in)
 	}
-	p.Done = true
+	p.Done.Store(true)
 }
 
 //执行工作池当中的任务
 func (p *Pool) Run() {
-	p.Done = false
+	p.Done.Store(false)
 	//只启动有限大小的协程，协程的数量不可以超过工作池设定的数量，防止计算资源崩溃
 	for i := 0; i < p.threads; i++ {
 		p.wg.Add(1)
 		time.Sleep(p.Interval)
 		go p.work()
-		if p.Done == true {
+		if p.Done.Load() {
 			break
 		}
 	}
@@ -118,7 +122,7 @@ func (p *Pool) work() {
 		p.wg.Done()
 	}()
 	for param = range p.in {
-		if p.Done {
+		if p.Done.Load() {
 			return
 		}
 		atomic.AddInt32(&p.length, 1)
@@ -138,8 +142,7 @@ func (p *Pool) work() {
 
 //生成工作票据
 func (p *Pool) generateTick() string {
-	rand.Seed(time.Now().UnixNano())
-	return strconv.FormatInt(rand.Int63(), 10)
+	return strconv.FormatInt(tickCounter.Add(1), 10)
 }
 
 //获取线程数

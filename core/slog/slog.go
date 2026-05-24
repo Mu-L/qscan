@@ -5,7 +5,6 @@ import (
 	"Qscan/lib/color"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
@@ -112,7 +111,7 @@ func Println(level Level, s ...interface{}) {
 		warn.Println(logStr)
 	case ERROR:
 		err.Println(logStr)
-		os.Exit(0)
+		os.Exit(1)
 	case DATA:
 		data.Println(logStr)
 	default:
@@ -120,7 +119,7 @@ func Println(level Level, s ...interface{}) {
 	}
 }
 
-var empty = &Logger{log.New(ioutil.Discard, "", 0), nil, nil}
+var empty = &Logger{log.New(io.Discard, "", 0), nil, nil}
 
 func SetLevel(level Level) {
 	if level > ERROR {

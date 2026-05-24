@@ -27,7 +27,7 @@ func (c *client) Defer(f func()) {
 }
 
 func (c *client) IsDone() bool {
-	return c.pool.Done
+	return c.pool.Done.Load()
 }
 
 func (c *client) RunningThreads() int {

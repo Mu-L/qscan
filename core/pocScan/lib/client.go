@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"golang.org/x/net/proxy"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"os"
 	"log"
 	"net"
 	"net/http"
@@ -129,7 +129,14 @@ func (r *StrMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for _, one := range tmp {
-		key, value := one.Key.(string), one.Value.(string)
+		key, ok := one.Key.(string)
+		if !ok {
+			continue
+		}
+		value, ok := one.Value.(string)
+		if !ok {
+			value = fmt.Sprintf("%v", one.Value)
+		}
 		*r = append(*r, StrItem{key, value})
 	}
 	return nil
@@ -171,9 +178,16 @@ func (r *ListMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for _, one := range tmp {
-		key := one.Key.(string)
+		key, ok := one.Key.(string)
+		if !ok {
+			continue
+		}
 		var value []string
-		for _, val := range one.Value.([]interface{}) {
+		valSlice, ok := one.Value.([]interface{})
+		if !ok {
+			continue
+		}
+		for _, val := range valSlice {
 			v := fmt.Sprintf("%v", val)
 			value = append(value, v)
 		}
@@ -244,7 +258,7 @@ func SelectPoc(Pocs embed.FS, pocname string) []string {
 
 func LoadPocbyPath(fileName string) (*Poc, error) {
 	p := &Poc{}
-	data, err := ioutil.ReadFile(fileName)
+	data, err := os.ReadFile(fileName)
 	if err != nil {
 		fmt.Printf("[-] load poc %s error3: %v\n", fileName, err)
 		return nil, err

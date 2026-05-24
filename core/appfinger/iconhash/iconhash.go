@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/twmb/murmur3"
 	"io"
-	"io/ioutil"
 )
 
 var isUint32 bool
@@ -39,6 +38,6 @@ func Encode(buf []byte) string {
 }
 
 func EncodeReader(r io.Reader) (string, error) {
-	body, err := ioutil.ReadAll(r)
+	body, err := io.ReadAll(r)
 	return mmh3Hash32(standBase64(body)), err
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/miekg/dns"
+	"sort"
 	"strings"
 	"time"
 )
@@ -31,23 +32,19 @@ type Nmap struct {
 
 func (n *Nmap) ScanTimeout(ip string, port int, timeout time.Duration) (status Status, response *Response) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	var resChan = make(chan bool)
+	defer cancel()
 
-	defer func() {
-		close(resChan)
-		cancel()
-	}()
+	var resChan = make(chan struct{}, 1)
 
 	go func() {
 		defer func() {
-			if r := recover(); r != nil {
-				if fmt.Sprint(r) != "send on closed channel" {
-					panic(r)
-				}
-			}
+			recover()
 		}()
 		status, response = n.Scan(ip, port)
-		resChan <- true
+		select {
+		case resChan <- struct{}{}:
+		case <-ctx.Done():
+		}
 	}()
 
 	select {
@@ -68,7 +65,9 @@ func (n *Nmap) Scan(ip string, port int) (status Status, response *Response) {
 	probeNames = append(probeNames, n.sslProbeMap...)
 	//探针去重
 	probeNames = probeNames.removeDuplicate()
-
+	if len(probeNames) == 0 {
+		return Open, nil
+	}
 	firstProbe := probeNames[0]
 	status, response = n.getRealResponse(ip, port, n.timeout, firstProbe)
 	if status == Closed || status == Matched {
@@ -216,14 +215,8 @@ func (n *Nmap) getFinger(responseRaw string, tls bool, requestName string) *Fing
 }
 
 func (n *Nmap) convResponse(s1 string) string {
-	//为了适配go语言的沙雕正则，只能讲二进制强行转换成UTF-8
-	b1 := []byte(s1)
-	var r1 []rune
-	for _, i := range b1 {
-		r1 = append(r1, rune(i))
-	}
-	s2 := string(r1)
-	return s2
+	//为了适配go语言正则，将二进制强行转换成UTF-8
+	return string([]rune(s1))
 }
 
 //配置类
@@ -252,7 +245,11 @@ func (n *Nmap) loads(s string) {
 		if !n.isCommand(line) {
 			continue
 		}
-		commandName := line[:strings.Index(line, " ")]
+		idx := strings.Index(line, " ")
+		if idx == -1 {
+			continue
+		}
+		commandName := line[:idx]
 		if commandName == "Exclude" {
 			n.loadExclude(line)
 			continue
@@ -323,7 +320,11 @@ func (n *Nmap) isCommand(line string) bool {
 		return false
 	}
 	//删除异常命令
-	commandName := line[:strings.Index(line, " ")]
+	idx := strings.Index(line, " ")
+	if idx == -1 {
+		return false
+	}
+	commandName := line[:idx]
 	commandArr := []string{
 		"Exclude", "Probe", "match", "softmatch", "ports", "sslports", "totalwaitms", "tcpwrappedms", "rarity", "fallback",
 	}
@@ -339,30 +340,9 @@ func (n *Nmap) sortOfRarity(list ProbeList) ProbeList {
 	if len(list) == 0 {
 		return list
 	}
-	var raritySplice []int
-	for _, probeName := range list {
-		rarity := n.probeNameMap[probeName].rarity
-		raritySplice = append(raritySplice, rarity)
-	}
-
-	for i := 0; i < len(raritySplice)-1; i++ {
-		for j := 0; j < len(raritySplice)-i-1; j++ {
-			if raritySplice[j] > raritySplice[j+1] {
-				m := raritySplice[j+1]
-				raritySplice[j+1] = raritySplice[j]
-				raritySplice[j] = m
-				mp := list[j+1]
-				list[j+1] = list[j]
-				list[j] = mp
-			}
-		}
-	}
-
-	for _, probeName := range list {
-		rarity := n.probeNameMap[probeName].rarity
-		raritySplice = append(raritySplice, rarity)
-	}
-
+	sort.Slice(list, func(i, j int) bool {
+		return n.probeNameMap[list[i]].rarity < n.probeNameMap[list[j]].rarity
+	})
 	return list
 }
 

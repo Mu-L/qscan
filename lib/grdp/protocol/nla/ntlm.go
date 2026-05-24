@@ -2,6 +2,7 @@ package nla
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/md5"
 	"crypto/rc4"
 	"encoding/binary"
@@ -404,7 +405,10 @@ func (n *NTLMv2) GetAuthenticateMessage(s []byte) (*AuthenticateMessage, *NTLMv2
 	exchangeKey := SessionBaseKey
 	exportedSessionKey := core.Random(16)
 	EncryptedRandomSessionKey := make([]byte, len(exportedSessionKey))
-	rc, _ := rc4.NewCipher(exchangeKey)
+	rc, errCipher := rc4.NewCipher(exchangeKey)
+	if errCipher != nil {
+		return nil, nil
+	}
 	rc.XORKeyStream(EncryptedRandomSessionKey, exportedSessionKey)
 
 	if challengeMsg.NegotiateFlags&NTLMSSP_NEGOTIATE_UNICODE != 0 {
@@ -446,8 +450,14 @@ func (n *NTLMv2) GetAuthenticateMessage(s []byte) (*AuthenticateMessage, *NTLMv2
 	glog.Debugf("ClientSealingKey:%s", hex.EncodeToString(ClientSealingKey))
 	glog.Debugf("ServerSealingKey:%s", hex.EncodeToString(ServerSealingKey))
 
-	encryptRC4, _ := rc4.NewCipher(ClientSealingKey)
-	decryptRC4, _ := rc4.NewCipher(ServerSealingKey)
+	encryptRC4, errEnc := rc4.NewCipher(ClientSealingKey)
+	if errEnc != nil {
+		return nil, nil
+	}
+	decryptRC4, errDec := rc4.NewCipher(ServerSealingKey)
+	if errDec != nil {
+		return nil, nil
+	}
 
 	ntlmSec := &NTLMv2Security{encryptRC4, decryptRC4, ClientSigningKey, ServerSigningKey, 0}
 
@@ -508,7 +518,7 @@ func (n *NTLMv2Security) GssDecrypt(s []byte) []byte {
 	core.WriteUInt32LE(seqNum, b)
 	core.WriteBytes(p, b)
 	verify := HMAC_MD5(n.VerifyKey, b.Bytes())
-	if string(verify) != string(check) {
+	if !hmac.Equal(verify, check) {
 		return nil
 	}
 	return p

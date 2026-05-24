@@ -185,42 +185,36 @@ func geturl(info *app.HostInfo, flag int, CheckData []Plugins.CheckDatas) (error
 
 func getRespBody(oResp *http.Response) ([]byte, error) {
 	var body []byte
+	var err error
 	if oResp.Header.Get("Content-Encoding") == "gzip" {
 		gr, err := gzip.NewReader(oResp.Body)
 		if err != nil {
 			return nil, err
 		}
 		defer gr.Close()
-		for {
-			buf := make([]byte, 1024)
-			n, err := gr.Read(buf)
-			if err != nil && err != io.EOF {
-				return nil, err
-			}
-			if n == 0 {
-				break
-			}
-			body = append(body, buf...)
-		}
-	} else {
-		raw, err := io.ReadAll(oResp.Body)
+		body, err = io.ReadAll(gr)
 		if err != nil {
 			return nil, err
 		}
-		body = raw
+	} else {
+		body, err = io.ReadAll(oResp.Body)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return body, nil
 }
 
+var titleRegexp = regexp.MustCompile("(?ims)<title>(.*?)</title>")
+
 func gettitle(body []byte) (title string) {
-	re := regexp.MustCompile("(?ims)<title>(.*?)</title>")
-	find := re.FindSubmatch(body)
+	find := titleRegexp.FindSubmatch(body)
 	if len(find) > 1 {
 		title = string(find[1])
 		title = strings.TrimSpace(title)
-		title = strings.Replace(title, "\n", "", -1)
-		title = strings.Replace(title, "\r", "", -1)
-		title = strings.Replace(title, "&nbsp;", " ", -1)
+		title = strings.ReplaceAll(title, "\n", "")
+		title = strings.ReplaceAll(title, "\r", "")
+		title = strings.ReplaceAll(title, "&nbsp;", " ")
 		if len(title) > 100 {
 			title = title[:100]
 		}

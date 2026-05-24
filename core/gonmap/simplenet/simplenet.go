@@ -1,8 +1,9 @@
 package simplenet
 
 import (
+	"bytes"
 	"crypto/tls"
-	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -13,40 +14,35 @@ func tcpSend(protocol string, netloc string, data string, duration time.Duration
 	protocol = strings.ToLower(protocol)
 	conn, err := net.DialTimeout(protocol, netloc, duration)
 	if err != nil {
-		//fmt.Println(conn)
-		return "", errors.New(err.Error() + " STEP1:CONNECT")
+		return "", fmt.Errorf("STEP1:CONNECT: %w", err)
 	}
 	defer conn.Close()
 	_, err = conn.Write([]byte(data))
 	if err != nil {
-		return "", errors.New(err.Error() + " STEP2:WRITE")
+		return "", fmt.Errorf("STEP2:WRITE: %w", err)
 	}
-	//读取数据
-	var buf []byte              // big buffer
-	var tmp = make([]byte, 256) // using small tmo buffer for demonstrating
-	var length int
-	for {
-		//设置读取超时Deadline
-		_ = conn.SetReadDeadline(time.Now().Add(time.Second * 3))
-		length, err = conn.Read(tmp)
-		buf = append(buf, tmp[:length]...)
-		if length < len(tmp) {
-			break
+	var buf bytes.Buffer
+	tmp := make([]byte, 4096)
+	for buf.Len() < size {
+		_ = conn.SetReadDeadline(time.Now().Add(duration))
+		n, err := conn.Read(tmp)
+		if n > 0 {
+			buf.Write(tmp[:n])
 		}
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", fmt.Errorf("STEP3:READ: %w", err)
+		}
+		if n < len(tmp) {
 			break
 		}
-		if len(buf) > size {
-			break
-		}
 	}
-	if err != nil && err != io.EOF {
-		return "", errors.New(err.Error() + " STEP3:READ")
+	if buf.Len() == 0 {
+		return "", fmt.Errorf("STEP3:response is empty")
 	}
-	if len(buf) == 0 {
-		return "", errors.New("STEP3:response is empty")
-	}
-	return string(buf), nil
+	return buf.String(), nil
 }
 
 func tlsSend(protocol string, netloc string, data string, duration time.Duration, size int) (string, error) {
@@ -61,39 +57,35 @@ func tlsSend(protocol string, netloc string, data string, duration time.Duration
 	}
 	conn, err := tls.DialWithDialer(dialer, protocol, netloc, config)
 	if err != nil {
-		return "", errors.New(err.Error() + " STEP1:CONNECT")
+		return "", fmt.Errorf("STEP1:CONNECT: %w", err)
 	}
 	defer conn.Close()
 	_, err = io.WriteString(conn, data)
 	if err != nil {
-		return "", errors.New(err.Error() + " STEP2:WRITE")
+		return "", fmt.Errorf("STEP2:WRITE: %w", err)
 	}
-	//读取数据
-	var buf []byte              // big buffer
-	var tmp = make([]byte, 256) // using small tmo buffer for demonstrating
-	var length int
-	for {
-		//设置读取超时Deadline
-		_ = conn.SetReadDeadline(time.Now().Add(time.Second * 3))
-		length, err = conn.Read(tmp)
-		buf = append(buf, tmp[:length]...)
-		if length < len(tmp) {
-			break
+	var buf bytes.Buffer
+	tmp := make([]byte, 4096)
+	for buf.Len() < size {
+		_ = conn.SetReadDeadline(time.Now().Add(duration))
+		n, err := conn.Read(tmp)
+		if n > 0 {
+			buf.Write(tmp[:n])
 		}
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", fmt.Errorf("STEP3:READ: %w", err)
+		}
+		if n < len(tmp) {
 			break
 		}
-		if len(buf) > size {
-			break
-		}
 	}
-	if err != nil && err != io.EOF {
-		return "", errors.New(err.Error() + " STEP3:READ")
+	if buf.Len() == 0 {
+		return "", fmt.Errorf("STEP3:response is empty")
 	}
-	if len(buf) == 0 {
-		return "", errors.New("STEP3:response is empty")
-	}
-	return string(buf), nil
+	return buf.String(), nil
 }
 
 func Send(protocol string, tls bool, netloc string, data string, duration time.Duration, size int) (string, error) {

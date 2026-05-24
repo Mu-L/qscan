@@ -11,14 +11,12 @@ import (
 	"fmt"
 	"github.com/google/cel-go/cel"
 	colorR "github.com/gookit/color"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 var (
@@ -231,10 +229,36 @@ func executePoc(oReq *http.Request, p *Poc) (bool, error, string) {
 	return success, nil, ""
 }
 
-func doSearch(re string, body string) map[string]string {
-	r, err := regexp.Compile(re)
+var (
+	regexCache = make(map[string]*regexp.Regexp)
+	regexMu    sync.RWMutex
+)
+
+func getRegexp(pattern string) *regexp.Regexp {
+	regexMu.RLock()
+	re, ok := regexCache[pattern]
+	regexMu.RUnlock()
+	if ok {
+		return re
+	}
+	regexMu.Lock()
+	defer regexMu.Unlock()
+	re, ok = regexCache[pattern]
+	if ok {
+		return re
+	}
+	re, err := regexp.Compile(pattern)
 	if err != nil {
 		fmt.Println("[-] regexp.Compile error: ", err)
+		return nil
+	}
+	regexCache[pattern] = re
+	return re
+}
+
+func doSearch(re string, body string) map[string]string {
+	r := getRegexp(re)
+	if r == nil {
 		return nil
 	}
 	result := r.FindStringSubmatch(body)
@@ -277,12 +301,7 @@ func newReverse() *Reverse {
 		return &Reverse{}
 	}
 	letters := "1234567890abcdefghijklmnopqrstuvwxyz"
-	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
-	sub := RandomStr(randSource, letters, 8)
-	//if true {
-	//	//默认不开启dns解析
-	//	return &Reverse{}
-	//}
+	sub := RandomCryptoStr(letters, 8)
 	urlStr := fmt.Sprintf("http://%s.%s", sub, ceyeDomain)
 	u, _ := url.Parse(urlStr)
 	return &Reverse{
@@ -534,7 +553,10 @@ func Combo(input ListMap) (output [][]string) {
 func MakeData(base [][]string, nextData []string) (output [][]string) {
 	for i := range base {
 		for _, j := range nextData {
-			output = append(output, append([]string{j}, base[i]...))
+			tmp := make([]string, 0, len(base[i])+1)
+			tmp = append(tmp, j)
+			tmp = append(tmp, base[i]...)
+			output = append(output, tmp)
 		}
 	}
 	return

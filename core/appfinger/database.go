@@ -6,13 +6,36 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var database []*fingerPrint
+
+var (
+	regexpCache = make(map[string]*regexp.Regexp)
+	regexpMu    sync.RWMutex
+)
+
+func getRegexp(pattern string) *regexp.Regexp {
+	regexpMu.RLock()
+	re, ok := regexpCache[pattern]
+	regexpMu.RUnlock()
+	if ok {
+		return re
+	}
+	regexpMu.Lock()
+	defer regexpMu.Unlock()
+	re, ok = regexpCache[pattern]
+	if ok {
+		return re
+	}
+	re = regexp.MustCompile(pattern)
+	regexpCache[pattern] = re
+	return re
+}
 
 func add(productName string, expression string) error {
 	httpFinger, err := parseFingerPrint(productName, expression)
@@ -120,7 +143,7 @@ func (e *Expression) makeBoolExpression(banner *httpfinger.Banner) string {
 	var expr = e.expr
 	for index, param := range e.paramSlice {
 		b := param.match(banner)
-		expr = strings.Replace(expr, "${"+strconv.Itoa(index+1)+"}", strconv.FormatBool(b), 1)
+		expr = strings.ReplaceAll(expr, "${"+strconv.Itoa(index+1)+"}", strconv.FormatBool(b))
 	}
 	return expr
 }
@@ -145,7 +168,7 @@ func exprCharVerification(expr string) error {
 	//把所有param替换为空
 	str := paramRegx.ReplaceAllString(expr, "")
 	//把所有逻辑字符替换为空
-	str = regexp.MustCompile(`[&| ()]`).ReplaceAllString(str, "")
+	str = regxCharVerification.ReplaceAllString(str, "")
 	//检测是否存在其他字符
 	if str != "" {
 		str = strings.ReplaceAll(str, `[quota]`, `\"`)
@@ -156,6 +179,7 @@ func exprCharVerification(expr string) error {
 }
 
 var regxSyntaxVerification = regexp.MustCompile(`\${\d+}`)
+var regxCharVerification = regexp.MustCompile(`[&| ()]`)
 
 func exprSyntaxVerification(expr string) error {
 	expr = regxSyntaxVerification.ReplaceAllString(expr, "true")
@@ -197,6 +221,9 @@ var keywordRegx = regexp.MustCompile("^" + strings.Join(keywordSlice, "|") + "$"
 
 func parseParam(expr string) (*Param, error) {
 	p := paramRegx.FindStringSubmatch(expr)
+	if len(p) < 4 {
+		return nil, errors.New("invalid param expression: " + expr)
+	}
 
 	keyword := p[1]
 	valueRaw := p[3]
@@ -232,8 +259,31 @@ func (p *Param) match(banner *httpfinger.Banner) bool {
 	subStr := p.value
 	keyword := p.keyword
 
-	v := reflect.ValueOf(*banner)
-	str := v.FieldByName(keyword).String()
+	var str string
+	switch keyword {
+	case "Protocol":
+		str = banner.Protocol
+	case "Port":
+		str = banner.Port
+	case "Header":
+		str = banner.Header
+	case "Body":
+		str = banner.Body
+	case "Response":
+		str = banner.Response
+	case "Cert":
+		str = banner.Cert
+	case "Title":
+		str = banner.Title
+	case "Hash":
+		str = banner.Hash
+	case "Icon":
+		str = banner.Icon
+	case "ICP":
+		str = banner.ICP
+	default:
+		str = ""
+	}
 
 	switch p.operator {
 	case unequal:
@@ -241,7 +291,7 @@ func (p *Param) match(banner *httpfinger.Banner) bool {
 	case equal:
 		return strings.Contains(str, subStr)
 	case regxEqual:
-		return regexp.MustCompile(subStr).MatchString(str)
+		return getRegexp(subStr).MatchString(str)
 	case superEqual:
 		return str == subStr
 	default:
@@ -368,13 +418,13 @@ func findCoupleBracketIndex(expr string) (int, error) {
 }
 
 func trimParentheses(s string) string {
+	if len(s) == 0 {
+		return s
+	}
 	if s[0:1] != "(" {
 		return s
 	}
 	length := len(s)
-	if length == 0 {
-		return s
-	}
 	if s[length-1:length] != ")" {
 		return s
 	}
@@ -449,7 +499,7 @@ func recursiveSplitExpression(s string) []string {
 	var result []string
 	s = trimParentheses(s)
 	for _, str := range splitExpression(s) {
-		sr := splitExpression(s)
+		sr := splitExpression(str)
 		if len(sr) == 1 {
 			result = append(result, sr[0])
 			continue

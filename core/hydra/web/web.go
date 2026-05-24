@@ -1,9 +1,9 @@
 package web
 
 import (
-	"context"
 	"errors"
-	"github.com/stacktitan/smb/smb"
+	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -13,37 +13,41 @@ var (
 )
 
 func Check(Host, Username, Domain, Password string, Port int) error {
-	status := make(chan error)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	options := smb.Options{
-		Host:        Host,
-		Port:        Port,
-		User:        Username,
-		Password:    Password,
-		Domain:      Domain,
-		Workstation: "",
+	var url string
+	if Port == 80 {
+		url = fmt.Sprintf("http://%s/", Host)
+	} else if Port == 443 {
+		url = fmt.Sprintf("https://%s/", Host)
+	} else {
+		url = fmt.Sprintf("http://%s:%d/", Host, Port)
 	}
-	//开始进行SMB连接
-	go func() {
-		session, err := smb.NewSession(options, false)
-		if err != nil {
-			status <- err
-			return
-		}
-		defer session.Close()
-		if session.IsAuthenticated == false {
-			status <- LoginFailedError
-			return
-		}
-		status <- nil
-	}()
 
-	select {
-	case <-ctx.Done():
-		return LoginTimeoutError
-	case err := <-status:
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
 		return err
 	}
 
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+	req.SetBasicAuth(Username, Password)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return LoginFailedError
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+		return nil
+	}
+	return LoginFailedError
 }

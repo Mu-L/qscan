@@ -434,6 +434,15 @@ var loginFailedString = []string{
 	"error",
 }
 
+var (
+	rePassPrompt   = regexp.MustCompile("(?is).*pass(word)?:$")
+	reUserPrompt   = regexp.MustCompile("(?is).*user(name)?:$")
+	reLoginPrompt  = regexp.MustCompile("(?is).*login:$")
+	reShellPrompt  = regexp.MustCompile("^[#$].*")
+	reDevicePrompt = regexp.MustCompile("^<[a-zA-Z0-9_]+>.*")
+	reLastLogin    = regexp.MustCompile("(?:s)last login")
+)
+
 func (c *Client) isLoginFailed(responseString string) bool {
 	responseString = strings.ToLower(responseString)
 	if responseString == "" {
@@ -444,13 +453,13 @@ func (c *Client) isLoginFailed(responseString string) bool {
 			return true
 		}
 	}
-	if regexp.MustCompile("(?is).*pass(word)?:$").MatchString(responseString) {
+	if rePassPrompt.MatchString(responseString) {
 		return true
 	}
-	if regexp.MustCompile("(?is).*user(name)?:$").MatchString(responseString) {
+	if reUserPrompt.MatchString(responseString) {
 		return true
 	}
-	if regexp.MustCompile("(?is).*login:$").MatchString(responseString) {
+	if reLoginPrompt.MatchString(responseString) {
 		return true
 	}
 	return false
@@ -459,13 +468,13 @@ func (c *Client) isLoginFailed(responseString string) bool {
 func (c *Client) isLoginSucceed(responseString string) bool {
 	responseStringArray := strings.Split(responseString, "\n")
 	lastLine := responseStringArray[len(responseStringArray)-1]
-	if regexp.MustCompile("^[#$].*").MatchString(lastLine) {
+	if reShellPrompt.MatchString(lastLine) {
 		return true
 	}
-	if regexp.MustCompile("^<[a-zA-Z0-9_]+>.*").MatchString(lastLine) {
+	if reDevicePrompt.MatchString(lastLine) {
 		return true
 	}
-	if regexp.MustCompile("(?:s)last login").MatchString(responseString) {
+	if reLastLogin.MatchString(responseString) {
 		return true
 	}
 	c.Clear()
@@ -473,11 +482,9 @@ func (c *Client) isLoginSucceed(responseString string) bool {
 	time.Sleep(time.Second * 3)
 	responseString = c.ReadContext()
 	if strings.Count(responseString, "\n") > 6 {
-		//slog.Println(slog.WARN, "3|", c.IPAddr, c.Port, responseString)
 		return true
 	}
 	if len([]rune(responseString)) > 100 {
-		//slog.Println(slog.WARN, "4|", c.IPAddr, c.Port, responseString)
 		return true
 	}
 	return false

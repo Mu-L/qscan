@@ -19,11 +19,12 @@ var resolvers = generateResolver()
 func LookupCNAME(domain string) ([]string, error) {
 	var lastErr error
 	for _, domainServer := range domainServers {
-		CNAMES, err := LookupCNAMEWithServer(domain, domainServer)
+		cnames, err := LookupCNAMEWithServer(domain, domainServer)
 		if err != nil {
 			lastErr = err
+			continue
 		}
-		return CNAMES, nil
+		return cnames, nil
 	}
 	return nil, lastErr
 }

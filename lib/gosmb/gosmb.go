@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net"
-	"strconv"
 	"time"
 )
 
@@ -31,19 +30,22 @@ func SmbGhostScan(host string) error {
 		return err
 	}
 
-	fmt.Println(strconv.Quote(pkt))
 	_, err = conn.Write([]byte(pkt))
 	if err != nil {
 		return err
 	}
 	buff := make([]byte, 1024)
 	err = conn.SetReadDeadline(time.Now().Add(timeout))
+	if err != nil {
+		return err
+	}
 	n, err := conn.Read(buff)
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(strconv.Quote(string(buff[:n])))
+	if n < 72 {
+		return fmt.Errorf("response too short: %d bytes", n)
+	}
 
 	if string(buff[68:70]) != "\x11\x03" || string(buff[70:72]) != "\x02\x00" {
 		result := fmt.Sprintf("1[+] %v CVE-2020-0796 SmbGhost Vulnerable", ip)
